@@ -1,0 +1,85 @@
+import PredicateFlow
+import RealmSwift
+import Realm
+
+{% macro createValueForCollectionProperty variable type %}
+    /// "{{ variable.name }}" property
+    {{ type.accessLevel }} var {{ variable.name }}: CollectionProperty<{{ variable.typeName.generic.typeParameters.first.typeName.name }}{% if variable.typeName.generic.typeParameters.first.type.implements.PredicateSchema %}Schema{% endif %}> { return builder.collection("{{ variable.name }}") }
+{% endmacro %}
+{% macro createValueForArrayProperty variable type %}
+    /// "{{ variable.name }}" property
+    {{ type.accessLevel }} var {{ variable.name }}: CollectionProperty<{{ variable.typeName.array.elementTypeName }}{% if variable.typeName.array.elementType.implements.PredicateSchema %}Schema{% endif %}> { return builder.collection("{{ variable.name }}") }
+{% endmacro %}
+{% macro createValueForObjectProperty variable type %}
+    /// "{{ variable.name }}" property
+    {{ type.accessLevel }} var {{ variable.name }}: ObjectProperty<{{ variable.type.name }}Schema> { return builder.object("{{ variable.name }}") }
+{% endmacro %}
+{% macro createValueForCustomProperty variable type obj %}
+    /// "{{ variable.name }}" property
+    {{ type.accessLevel }} var {{ variable.name }}: {{ obj }}PredicateProperty { return builder.{{ obj|lowerFirstLetter }}("{{ variable.name }}") }
+{% endmacro %}
+{% macro createValueForGenericProperty variable type %}
+    /// "{{ variable.name }}" property
+    {{ type.accessLevel }} var {{ variable.name }}: PredicateProperty<{{ variable.unwrappedTypeName }}> { return builder.generic("{{ variable.name }}") }
+{% endmacro %}
+{% macro createPropertiesForType implementationType %}
+    {% for variable in implementationType.storedVariables %}
+    {% if variable.isArray %}
+    {% call createValueForArrayProperty variable implementationType %}
+
+    {% elif variable.typeName.generic.name == "List" %}
+    {% call createValueForCollectionProperty variable implementationType %}
+    {% elif variable.typeName.generic.name == "LinkingObjects" %}
+    {% call createValueForCollectionProperty variable implementationType %}
+    {% elif variable.typeName.generic.name == "RealmOptional" and variable.typeName.generic.typeParameters.first.typeName.name == "Bool" %}
+    {% call createValueForCustomProperty variable implementationType "Bool" %}
+    {% elif variable.typeName.generic.name == "RealmOptional" and variable.typeName.generic.typeParameters.first.typeName.name == "String" %}
+    {% call createValueForCustomProperty variable implementationType "String" %}
+    {% elif variable.typeName.generic.name == "RealmOptional" %}
+    {% call createValueForGenericProperty variable implementationType %}
+    {% elif variable.type.implements.PredicateSchema %}
+    {% call createValueForObjectProperty variable implementationType %}
+    {% elif variable.unwrappedTypeName == "Bool" %}
+    {% call createValueForCustomProperty variable implementationType "Bool" %}
+    {% elif variable.unwrappedTypeName == "String" %}
+    {% call createValueForCustomProperty variable implementationType "String" %}
+    {% elif variable.unwrappedTypeName == "Int" or variable.unwrappedTypeName == "Float" or variable.unwrappedTypeName == "Double" or variable.unwrappedTypeName == "TimeInterval" or variable.unwrappedTypeName == "Date" or variable.unwrappedTypeName == "UInt" or variable.unwrappedTypeName == "Int8" or variable.unwrappedTypeName == "UInt8" or variable.unwrappedTypeName == "Int16" or variable.unwrappedTypeName == "UInt16" or variable.unwrappedTypeName == "Int32" or variable.unwrappedTypeName == "UInt32" or variable.unwrappedTypeName == "Int64" or variable.unwrappedTypeName == "UInt64" %}
+    {% call createValueForGenericProperty variable implementationType %}
+    {% else %}
+        // [!!!WARNING!!!] Error generating PredicateProperty for "{{ variable.name }}" [type: {{ variable.unwrappedTypeName }}]
+    {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{% for implementationType in types.implementing.PredicateSchema %}
+{% if implementationType.name != "ObservationSubscription" %}
+/// The "{{ implementationType.name }}" Predicate Schema
+{{ implementationType.accessLevel }} struct {{ implementationType.name }}Schema: GeneratedPredicateSchema {
+    
+    /// DO NOT USE THIS PROPERTY DIRECTLY!
+    /// Instead use builder if you need to build a predicate property
+    {{ implementationType.accessLevel }} private(set) var compoundFieldBuilder: CompoundFieldBuilder
+
+    /// DO NOT USE THIS INIT DIRECTLY!
+    {{ implementationType.accessLevel }} init(compoundFieldBuilder: CompoundFieldBuilder) { self.compoundFieldBuilder = compoundFieldBuilder }
+
+    {% if implementationType.inherits.IdentifiableStorageObject %}
+        {% for variable in type.IdentifiableStorageObject.storedVariables %}
+            {% if variable.name == "identifier" %}
+                {% call createValueForCustomProperty variable implementationType "String" %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% call createPropertiesForType implementationType %}
+}
+{% endif %}
+{% endfor %}
+
+{% for implementationType in types.implementing.StorageSchemaProvidable %}
+{% if implementationType.name != "ObservationSubscription" %}
+{{ implementationType.accessLevel }} extension {{ implementationType.name }} { typealias Schema = {{ implementationType.name }}Schema }
+{{ implementationType.accessLevel }} extension {{ implementationType.name }}Schema { typealias Storage = {{ implementationType.name }} }
+
+{% endif %}
+{% endfor %}
