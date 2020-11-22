@@ -83,6 +83,7 @@ final class EventMember: IdentifiableStorageObject, PredicateSchema, StorageSche
 ````
 
 #### Save objects in transaction
+
 ````swift
 let user = User().apply {
   $0.id = Identifier(value: "user_id")
@@ -105,11 +106,28 @@ let eventMember = EventMember().apply {
   event.members.append($0)
 }
 
-try! DB.perform { transaction in
+try DB.perform { transaction in
   transaction.add(
     objects: [user, event, eventMember],
     update: false
   )
+}
+````
+
+#### Update objects in transaction
+
+````swift
+func update(user: User) throws {
+  try DB.user().update(user) {
+    $0.firstName = "Tony"
+    $0.lastName = "Stark"
+  }
+}
+    
+func update(event: Event, newDate: Date) throws {
+  try DB.event().update(event) {
+    $0.date = Date().addingTimeInterval(3600)
+  }
 }
 ````
 
