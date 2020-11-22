@@ -77,7 +77,7 @@ import RealmStorage
 {% endfor %}
 
 {% for implementationType in types.implementing.StorageSchemaProvidable %}
-{% if implementationType.name != "ObservationSubscription" %}
+{% if implementationType.name != "ObservationSubscription" and implementationType.name != "StorageSchemaObject" %}
 {{ implementationType.accessLevel }} extension {{ implementationType.name }} { typealias Schema = {{ implementationType.name }}Schema }
 {{ implementationType.accessLevel }} extension {{ implementationType.name }}Schema { typealias Storage = {{ implementationType.name }} }
 
