@@ -131,6 +131,45 @@ func update(event: Event, newDate: Date) throws {
 }
 ````
 
+#### Sync fetch operations
+
+````swift
+let users = DB.user().objects { query in
+   query.add { $0.firstName.isEqual("Robert") }
+        .and { $0.events.count().isGreater(thanOrEqual: 5) }
+        .and(\.updatedAt.isNotNil)
+}.get()
+        
+let user = DB.user().object(by: Identifier(value: "user_id"))
+        
+let lastEvent = DB.event().last()
+let allEvents = DB.event().all().get()
+````
+
+
+#### Async fetch operations
+
+````swift
+DB.event().first { event in
+  if event != nil {
+    // do actions
+  }
+}
+        
+DB.event().objects(matching: { query in
+  query.add { $0.members.count() > 1000 }
+  query.sort(by: { $0.date.ascending() })
+}, completion: { operation in
+  let events = operation.get()
+  
+  // do some actions
+  for event in events {
+    print(event.description)
+  }
+})
+````
+
+
 ## License
 
 This code is distributed under the MIT license. See the  `LICENSE`  file for more info.
