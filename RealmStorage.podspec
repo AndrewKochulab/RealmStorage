@@ -29,5 +29,6 @@ Modern wrapper for Realm Database [iOS, macOS, tvOS & watchOS]
   s.dependency 'Sourcery'
   s.dependency 'KeychainSwift'
   s.source_files = "Sources/RealmStorage/**/*.{swift, h}"
+  s.preserve_paths = [ 'Sources/RealmStorage/PredicateFlow/Core/Templates', 'Sources/RealmStorage/PredicateFlow/Core/Classes/Utils' ]
   
 end
