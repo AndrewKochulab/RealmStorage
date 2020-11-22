@@ -14,6 +14,18 @@ let users = DB.user().objects { query in
 }.get()
 ````
 
+## Features
+
+`RealmStorage` supports the following operations:
+
+- Schemas autogeneration
+- Built-in database migration
+- Multithreading
+- Strong-typed fetch queries
+- Write transactions
+- All CRUD operations 
+
+
 ## How to use
 ### Installation
 
