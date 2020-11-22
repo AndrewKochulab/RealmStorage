@@ -27,6 +27,7 @@ Modern wrapper for Realm Database [iOS, macOS, tvOS & watchOS]
   s.dependency 'Realm'
   s.dependency 'RealmSwift'
   s.dependency 'Sourcery'
+  s.dependency 'KeychainSwift'
   s.source_files = "Sources/RealmStorage/**/*.{swift, h}"
   
 end
