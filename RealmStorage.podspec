@@ -18,7 +18,7 @@ Modern wrapper for Realm Database [iOS, macOS, tvOS & watchOS]
   }
 
   s.social_media_url = 'https://github.com/AndrewKochulab'
-  s.platform = :ios, "8.0"
+  s.platform = :ios, "9.0"
 
   s.cocoapods_version = '>= 1.4.0'
   s.swift_version = '5.2'
