@@ -217,6 +217,34 @@ DB.event().objects(matching: { query in
 })
 ````
 
+#### Create own read operations
+
+````swift
+final class ReadCurrentSubscriptionsDatabaseOperation: ReadObjectsDatabaseOperation<Subscription> {
+  init(shouldThreadSafe isThreadSafe: Bool = false) {
+    super.init(matching: { query in
+      query.add(\.hasExpired.isFalse)
+      query.sort(by: { $0.expiresAt.descending() })
+    }, shouldThreadSafe: isThreadSafe)
+  }
+}
+
+extension SubscriptionPersistence { 
+  func current() -> [Subscription] { 
+    ReadCurrentSubscriptionsDatabaseOperation().get()
+  }
+}
+
+let currentSubscriptions = DB.subscription().current()
+
+// or 
+
+let currentSubscriptions = DB.subscription().objects(matching: { query in
+  query.add(\.hasExpired.isFalse)
+  query.sort(by: { $0.expiresAt.descending() })
+}).get()
+````
+
 
 ## License
 
