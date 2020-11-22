@@ -97,4 +97,25 @@ public final class RealmDatabase {
     private func realm() throws -> Realm {
         try thread.getInstance()
     }
+    
+    
+    // MARK: - Transaction
+    
+    public func perform(
+        _ transaction: @escaping (RealmWriteTransaction) throws -> Void
+    ) throws {
+        let realm = try self.realm()
+        
+        try RealmWriteTransactionContainer(realm: realm)
+            .write(transaction)
+    }
+    
+    public func performSafe(
+        _ transaction: @escaping (RealmWriteTransaction) throws -> Void
+    ) throws {
+        let realm = try self.realm()
+        
+        try SafeRealmWriteTransactionContainer(realm: realm)
+            .write(transaction)
+    }
 }
