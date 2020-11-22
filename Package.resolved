@@ -68,9 +68,9 @@
         "package": "Realm",
         "repositoryURL": "https://github.com/realm/realm-cocoa.git",
         "state": {
-          "branch": null,
+          "branch": "master",
           "revision": "a4c647a5b2705591bf9472aed46786d00b71ea2b",
-          "version": "10.1.4"
+          "version": null
         }
       },
       {

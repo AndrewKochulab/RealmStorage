@@ -19,7 +19,7 @@ let package = Package(
         .package(
             name: "Realm",
             url: "https://github.com/realm/realm-cocoa.git",
-            from: "10.0.0"
+            .branch("master")
         ),
         .package(
             name: "Sourcery",
