@@ -17,6 +17,16 @@ Cocoapods:
 pod 'RealmStorage'
 ````
 
+Create a new build phase `Project -> Main Target -> Build Phases` and add the next code:
+
+````
+"$PODS_ROOT/Sourcery/bin/sourcery" --sources "$PODS_ROOT/RealmStorage/Sources/RealmStorage/PredicateFlow/Core/Classes/Utils/" --sources "$SRCROOT" --templates "$PODS_ROOT/RealmStorage/Sources/RealmStorage/PredicateFlow/Core/Templates/PredicateFlow.stencil" --output "$SRCROOT/PredicateFlow.generated.swift" --disableCache
+````
+
+Import `PredicateFlow.generated.swift` file to your Main target.
+
+It will automatically generate all schemas needed for fetch database queries (see details below).
+
 ### Example
 
 #### Create Tables
