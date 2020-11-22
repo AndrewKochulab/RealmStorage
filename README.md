@@ -82,6 +82,37 @@ final class EventMember: IdentifiableStorageObject, PredicateSchema, StorageSche
 }
 ````
 
+#### Save objects in transaction
+````swift
+let user = User().apply {
+  $0.id = Identifier(value: "user_id")
+  $0.firstName = "Steve"
+  $0.lastName = "Rogers"
+  $0.gender = .male
+}
+
+let event = Event().apply {
+  $0.id = Identifier(value: "event_id")
+  $0.name = "Avengers Game"
+  $0.date = Date().addingTimeInterval(3600 * 10)
+  $0.author = user
+}
+
+let eventMember = EventMember().apply {
+  $0.event = event
+  $0.user = user
+}.apply {
+  event.members.append($0)
+}
+
+try! DB.perform { transaction in
+  transaction.add(
+    objects: [user, event, eventMember],
+    update: false
+  )
+}
+````
+
 ## License
 
 This code is distributed under the MIT license. See the  `LICENSE`  file for more info.
