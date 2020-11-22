@@ -24,6 +24,9 @@ Modern wrapper for Realm Database [iOS, macOS, tvOS & watchOS]
   s.swift_version = '5.2'
 
   s.requires_arc = true
+  s.dependency 'Realm'
+  s.dependency 'RealmSwift'
+  s.dependency 'Sourcery'
   s.source_files = "Sources/RealmStorage/**/*.{swift, h}"
   
 end
