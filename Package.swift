@@ -5,6 +5,12 @@ import PackageDescription
 
 let package = Package(
     name: "RealmStorage",
+    platforms: [
+        .iOS(.v11),
+        .macOS(.v10_13),
+        .tvOS(.v10),
+        .watchOS(.v3)
+    ],
     products: [
         .library(
             name: "RealmStorage",
