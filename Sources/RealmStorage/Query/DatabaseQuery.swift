@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import PredicateFlow
 
 public final class DatabaseQueryCompoundPredicate<Schema: GeneratedPredicateSchema> {
     

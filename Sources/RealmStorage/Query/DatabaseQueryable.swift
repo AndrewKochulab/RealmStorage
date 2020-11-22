@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import PredicateFlow
 
 public protocol DatabaseQueryable: class {
     

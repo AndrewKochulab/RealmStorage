@@ -1,6 +1,6 @@
-import PredicateFlow
-import RealmSwift
 import Realm
+import RealmSwift
+import RealmStorage
 
 {% macro createValueForCollectionProperty variable type %}
     /// "{{ variable.name }}" property

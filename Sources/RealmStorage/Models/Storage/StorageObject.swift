@@ -8,7 +8,6 @@
 import Foundation
 import RealmSwift
 import Realm
-import PredicateFlow
 
 public protocol StorageSchemaProvidable: class {
     associatedtype Schema: GeneratedPredicateSchema

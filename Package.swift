@@ -15,10 +15,6 @@ let package = Package(
         .library(
             name: "RealmStorage",
             targets: ["RealmStorage"]
-        ),
-        .library(
-            name: "PredicateFlow",
-            targets: ["PredicateFlow"]
         )
     ],
     dependencies: [
@@ -40,22 +36,8 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "PredicateFlow",
-            dependencies: [
-                .product(
-                    name: "Realm",
-                    package: "Realm"
-                ),
-                .product(
-                    name: "RealmSwift",
-                    package: "Realm"
-                )
-            ]
-        ),
-        .target(
             name: "RealmStorage",
             dependencies: [
-                "PredicateFlow",
                 .product(
                     name: "Realm",
                     package: "Realm"
