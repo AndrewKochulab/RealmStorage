@@ -7,25 +7,19 @@
 
 import Foundation
 
-public protocol CompoundID: ID {
+public struct CompoundID: ID {
+   
+    // MARK: - Properties
     
-    // MARK: - Appearance
+    public let value: String
     
-    static func from(
+    
+    // MARK: - Initialization
+    
+    public init(
         items: String...,
         separator: String
-    ) -> Self
-    
-}
-
-public extension CompoundID {
-    
-    // MARK: - Appearance
-    
-    static func from(
-        items: String...,
-        separator: String = "_"
-    ) -> Self {
-        self.init(value: items.joined(separator: separator))
+    ) {
+        self.value = items.joined(separator: separator)
     }
 }

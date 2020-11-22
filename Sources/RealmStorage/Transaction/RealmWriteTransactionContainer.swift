@@ -24,7 +24,7 @@ public class RealmWriteTransactionContainer {
     
     // MARK: - Appearance
     
-    open func write(
+    public func write(
         _ transaction: @escaping (RealmWriteTransaction) throws -> Void
     ) throws {
         let writeTransaction = RealmWriteTransaction(realm: realm)

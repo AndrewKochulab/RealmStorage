@@ -34,6 +34,11 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     var queue: RealmDatabaseQueue { RealmContext.queue }
     
     
+    // MARK: - Initialization
+    
+    public init() { }
+    
+    
     // MARK: - Realm
     
     public func realm() throws -> Realm { try RealmContext.realm() }

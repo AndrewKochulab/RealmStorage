@@ -35,7 +35,7 @@ open class ReadObjectObjectsDatabaseOperation<
     
     // MARK: - Appearance
     
-    override public func configuredResults() throws -> AnyRealmCollection<Storage> {
+    public override func configuredResults() throws -> AnyRealmCollection<Storage> {
         if let predicate = query.predicate,
            !query.sortDescriptors.isEmpty {
             return AnyRealmCollection(

@@ -40,6 +40,11 @@ public final class RealmDatabase {
     }
     
     
+    // MARK: - Initialization
+    
+    public init() { }
+    
+    
     // MARK: - Configuration
     
     public func initiateModule() throws {

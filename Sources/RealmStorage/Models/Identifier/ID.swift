@@ -13,18 +13,13 @@ public protocol ID: Applyable, CustomStringConvertible {
     
     var value: String { get }
     
-    
-    // MARK: - Initialization
-    
-    init(value: String)
-    
 }
 
-extension ID {
+public extension ID {
     
     // MARK: - Properties
     
-    public var description: String {
+    var description: String {
         value.description
     }
     

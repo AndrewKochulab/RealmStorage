@@ -7,11 +7,11 @@
 
 import Foundation
 
-open class ClearDatabaseOperation: WriteDatabaseOperation {
+public final class ClearDatabaseOperation: WriteDatabaseOperation {
     
     // MARK: - Appearance
     
-    open override func execute() throws {
+    public override func execute() throws {
         try container.write { transaction in
             transaction.deleteAll()
         }
