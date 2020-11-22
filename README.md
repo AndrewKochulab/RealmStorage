@@ -2,6 +2,18 @@
 
 Modern wrapper for Realm Database [iOS, macOS, tvOS &amp; watchOS]
 
+## Quick usage
+
+An easy way to write code like below, strong-typed fetch queries, fast-developing data layer, multithreading, and much more interesting things.
+
+````swift
+let users = DB.user().objects { query in
+   query.add { $0.firstName.isEqual("Robert") }
+        .and { $0.events.count().isGreater(thanOrEqual: 5) }
+        .and(\.updatedAt.isNotNil)
+}.get()
+````
+
 ## How to use
 ### Installation
 
