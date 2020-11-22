@@ -9,3 +9,7 @@ To add `RealmStorage` to a  [Swift Package Manager](https://swift.org/package-ma
 ````swift
 .package(url: "https://github.com/AndrewKochulab/RealmStorage.git")
 ````
+
+## License
+
+This code is distributed under the MIT license. See the  `LICENSE`  file for more info.
