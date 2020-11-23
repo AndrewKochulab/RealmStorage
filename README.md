@@ -186,7 +186,7 @@ func update(user: User) throws {
     
 func update(event: Event, newDate: Date) throws {
   try DB.event().update(event) {
-    $0.date = Date().addingTimeInterval(3600)
+    $0.date = newDate
   }
 }
 ````
