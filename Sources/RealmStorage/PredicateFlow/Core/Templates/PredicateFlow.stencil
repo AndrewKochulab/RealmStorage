@@ -1,25 +1,21 @@
+import Foundation
 import Realm
 import RealmSwift
 import RealmStorage
 
 {% macro createValueForCollectionProperty variable type %}
-    /// "{{ variable.name }}" property
     {{ type.accessLevel }} var {{ variable.name }}: CollectionProperty<{{ variable.typeName.generic.typeParameters.first.typeName.name }}{% if variable.typeName.generic.typeParameters.first.type.implements.PredicateSchema %}Schema{% endif %}> { return builder.collection("{{ variable.name }}") }
 {% endmacro %}
 {% macro createValueForArrayProperty variable type %}
-    /// "{{ variable.name }}" property
     {{ type.accessLevel }} var {{ variable.name }}: CollectionProperty<{{ variable.typeName.array.elementTypeName }}{% if variable.typeName.array.elementType.implements.PredicateSchema %}Schema{% endif %}> { return builder.collection("{{ variable.name }}") }
 {% endmacro %}
 {% macro createValueForObjectProperty variable type %}
-    /// "{{ variable.name }}" property
     {{ type.accessLevel }} var {{ variable.name }}: ObjectProperty<{{ variable.type.name }}Schema> { return builder.object("{{ variable.name }}") }
 {% endmacro %}
 {% macro createValueForCustomProperty variable type obj %}
-    /// "{{ variable.name }}" property
     {{ type.accessLevel }} var {{ variable.name }}: {{ obj }}PredicateProperty { return builder.{{ obj|lowerFirstLetter }}("{{ variable.name }}") }
 {% endmacro %}
 {% macro createValueForGenericProperty variable type %}
-    /// "{{ variable.name }}" property
     {{ type.accessLevel }} var {{ variable.name }}: PredicateProperty<{{ variable.unwrappedTypeName }}> { return builder.generic("{{ variable.name }}") }
 {% endmacro %}
 {% macro createPropertiesForType implementationType %}
@@ -52,15 +48,10 @@ import RealmStorage
 {% endmacro %}
 
 {% for implementationType in types.implementing.PredicateSchema %}
-{% if implementationType.name != "ObservationSubscription" %}
-/// The "{{ implementationType.name }}" Predicate Schema
+{% if implementationType.name != "ObservationSubscription" and implementationType.name != "StorageSchemaObject" and implementationType.name != "StorageObject" and implementationType.name != "IdentifiableStorageObject" %}
 {{ implementationType.accessLevel }} struct {{ implementationType.name }}Schema: GeneratedPredicateSchema {
-    
-    /// DO NOT USE THIS PROPERTY DIRECTLY!
-    /// Instead use builder if you need to build a predicate property
     {{ implementationType.accessLevel }} private(set) var compoundFieldBuilder: CompoundFieldBuilder
 
-    /// DO NOT USE THIS INIT DIRECTLY!
     {{ implementationType.accessLevel }} init(compoundFieldBuilder: CompoundFieldBuilder) { self.compoundFieldBuilder = compoundFieldBuilder }
 
     {% if implementationType.inherits.IdentifiableStorageObject %}
@@ -70,14 +61,9 @@ import RealmStorage
             {% endif %}
         {% endfor %}
     {% endif %}
-
     {% call createPropertiesForType implementationType %}
 }
-{% endif %}
-{% endfor %}
 
-{% for implementationType in types.implementing.StorageSchemaProvidable %}
-{% if implementationType.name != "ObservationSubscription" and implementationType.name != "StorageSchemaObject" %}
 {{ implementationType.accessLevel }} extension {{ implementationType.name }} { typealias Schema = {{ implementationType.name }}Schema }
 {{ implementationType.accessLevel }} extension {{ implementationType.name }}Schema { typealias Storage = {{ implementationType.name }} }
 
