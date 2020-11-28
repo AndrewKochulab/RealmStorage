@@ -1,5 +1,5 @@
 //
-//  CompoundID.swift
+//  CompoundEntityID.swift
 //  RealmStorage
 //
 //  Created by Andrew Kochulab on 20.11.2020.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct CompoundID: ID {
+public struct CompoundEntityID: EntityID {
    
     // MARK: - Properties
     

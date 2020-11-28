@@ -1,5 +1,5 @@
 //
-//  ID.swift
+//  EntityID.swift
 //  RealmStorage
 //
 //  Created by Andrew Kochulab on 20.11.2020.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol ID: Applyable, CustomStringConvertible {
+public protocol EntityID: CustomStringConvertible {
     
     // MARK: - Properties
     
@@ -15,7 +15,7 @@ public protocol ID: Applyable, CustomStringConvertible {
     
 }
 
-public extension ID {
+public extension EntityID {
     
     // MARK: - Properties
     
@@ -26,7 +26,7 @@ public extension ID {
     
     // MARK: - Appearance
     
-    func equal(to id: ID) -> Bool {
+    func equal(to id: EntityID) -> Bool {
         self.value == id.value
     }
 }

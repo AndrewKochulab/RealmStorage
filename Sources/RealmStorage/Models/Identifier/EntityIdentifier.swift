@@ -1,5 +1,5 @@
 //
-//  Identifier.swift
+//  EntityIdentifier.swift
 //  RealmStorage
 //
 //  Created by Andrew Kochulab on 20.11.2020.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Identifier: ID {
+public struct EntityIdentifier: EntityID {
     
     // MARK: - Properties
     
