@@ -1,7 +1,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RealmStorage'
-  s.version          = '1.0.0'
+  s.version          = '1.0.3'
   s.summary          = 'RealmStorage'
 
   s.description      = <<-DESC
