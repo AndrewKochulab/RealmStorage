@@ -16,6 +16,15 @@ public protocol StorageSchemaProvidable: class {
 public typealias StorageSchemaObject = StorageObject & StorageSchemaProvidable
 
 open class StorageObject: Object {
+    
+    // MARK: - Properties
+    
+    @objc
+    private dynamic var _schemaValue = ""
+    
+    
+    // MARK: - Initialization
+    
     public required override init() {
         super.init()
     }
