@@ -30,7 +30,15 @@ open class RealmMigrationUtility {
     public let schemaVersion: SchemaVersion
     public let enableEncryption: Bool
     
-    @Keychain(prefix: "io.realm.Database", key: "encryptionKey", defaultValue: nil)
+    open class var encryptionPrefix: String {
+        "io.realm.Database"
+    }
+    
+    open class var encryptionKey: String {
+        "encryptionKey"
+    }
+    
+    @Keychain(prefix: encryptionPrefix, key: encryptionKey, defaultValue: nil)
     private var encryptionTokenData: Data?
     
     
