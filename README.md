@@ -59,7 +59,7 @@ It will automatically generate all schemas needed for fetch database queries (se
 import RealmSwift
 import RealmStorage
 
-final class User: IdentifiableStorageObject, PredicateSchema, StorageSchemaProvidable {
+final class User: IdentifiableStorageObject, PredicateSchema {
   enum Gender: String {
     case male, female
   }
@@ -80,7 +80,7 @@ final class User: IdentifiableStorageObject, PredicateSchema, StorageSchemaProvi
   let events = List<Event>()
 }
 
-final class Event: IdentifiableStorageObject, PredicateSchema, StorageSchemaProvidable {
+final class Event: IdentifiableStorageObject, PredicateSchema {
   dynamic var date: Date?
   dynamic var name = ""
   dynamic var author: User?
@@ -88,7 +88,7 @@ final class Event: IdentifiableStorageObject, PredicateSchema, StorageSchemaProv
   let members = List<EventMember>()
 }
 
-final class EventMember: IdentifiableStorageObject, PredicateSchema, StorageSchemaProvidable {
+final class EventMember: IdentifiableStorageObject, PredicateSchema {
   dynamic var joinedAt = Date()
   dynamic var user: User? {
     didSet {
@@ -124,20 +124,12 @@ See repository: https://github.com/andreadelfante/PredicateFlow
 ````swift
 /// The "User" Predicate Schema
 internal struct UserSchema: GeneratedPredicateSchema {
-    /// "identifier" property
     internal var identifier: StringPredicateProperty { return builder.string("identifier") }
-
-    /// "createdAt" property
     internal var createdAt: PredicateProperty<Date> { return builder.generic("createdAt") }
-    /// "updatedAt" property
     internal var updatedAt: PredicateProperty<Date> { return builder.generic("updatedAt") }
-    /// "firstName" property
     internal var firstName: StringPredicateProperty { return builder.string("firstName") }
-    /// "lastName" property
     internal var lastName: StringPredicateProperty { return builder.string("lastName") }
-    /// "genderName" property
     internal var genderName: StringPredicateProperty { return builder.string("genderName") }
-    /// "events" property
     internal var events: CollectionProperty<EventSchema> { return builder.collection("events") }
 }
 ````
@@ -199,9 +191,9 @@ let users = DB.user().objects { query in
         .and { $0.events.count().isGreater(thanOrEqual: 5) }
         .and(\.updatedAt.isNotNil)
 }.get()
-        
+
 let user = DB.user().object(by: Identifier(value: "user_id"))
-        
+
 let lastEvent = DB.event().last()
 let allEvents = DB.event().all().get()
 ````
