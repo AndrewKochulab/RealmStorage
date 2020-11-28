@@ -64,8 +64,8 @@ import RealmStorage
     {% call createPropertiesForType implementationType %}
 }
 
-{{ implementationType.accessLevel }} extension {{ implementationType.name }} { typealias Schema = {{ implementationType.name }}Schema }
-{{ implementationType.accessLevel }} extension {{ implementationType.name }}Schema { typealias Storage = {{ implementationType.name }} }
+extension {{ implementationType.name }}: StorageSchemaProvidable { {{ implementationType.accessLevel }} typealias Schema = {{ implementationType.name }}Schema }
+extension {{ implementationType.name }}Schema { {{ implementationType.accessLevel }} typealias Storage = {{ implementationType.name }} }
 
 {% endif %}
 {% endfor %}
