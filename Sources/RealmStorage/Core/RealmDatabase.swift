@@ -86,7 +86,7 @@ public final class RealmDatabase {
             .execute()
     }
     
-    private func flushCorruptedDatabase() {
+    public func flushCorruptedDatabase() {
         guard let url = Realm.Configuration.defaultConfiguration.fileURL else {
             return
         }
@@ -94,7 +94,7 @@ public final class RealmDatabase {
         try? FileManager.default.removeItem(at: url)
     }
     
-    private func realm() throws -> Realm {
+    public func realm() throws -> Realm {
         try thread.getInstance()
     }
     
@@ -117,5 +117,16 @@ public final class RealmDatabase {
         
         try SafeRealmWriteTransactionContainer(realm: realm)
             .write(transaction)
+    }
+    
+    
+    // MARK: - Apply
+    
+    @inline(__always)
+    @discardableResult
+    public func apply(_ configuration: (RealmDatabase) throws -> Void) rethrows -> RealmDatabase {
+        try configuration(self)
+        
+        return self
     }
 }

@@ -101,13 +101,13 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     
     
     public func object(
-        by id: ID
+        by id: EntityID
     ) -> Storage? {
         ReadUniqueObjectDatabaseOperation<Storage>(id: id).get()
     }
     
     public func object(
-        by id: ID,
+        by id: EntityID,
         completion: @escaping (Storage?) -> Void
     ) {
         fetch {
@@ -120,11 +120,11 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     }
     
     
-    public func first() -> Storage? {
+    open func first() -> Storage? {
         ReadFirstObjectDatabaseOperation().first()
     }
     
-    public func first(
+    open func first(
         completion: @escaping (Storage?) -> Void
     ) {
         fetch {
@@ -139,11 +139,11 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     }
     
     
-    public func last() -> Storage? {
+    open func last() -> Storage? {
         ReadLastObjectDatabaseOperation().last()
     }
     
-    public func last(
+    open func last(
         completion: @escaping (Storage?) -> Void
     ) {
         fetch {
@@ -160,7 +160,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     
     // MARK: Save
     
-    public func save(_ object: Storage) throws {
+    open func save(_ object: Storage) throws {
         let context = try realm()
         
         try SaveObjectDatabaseOperation(
@@ -169,7 +169,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func save(
+    open func save(
         _ object: Storage,
         completion: @escaping EmptySaveDatabaseOperationCallback
     ) {
@@ -192,7 +192,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     }
     
     
-    public func save(_ objects: [Storage]) throws {
+    open func save(_ objects: [Storage]) throws {
         let context = try self.realm()
         
         try SaveObjectsDatabaseOperation(
@@ -201,7 +201,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func save(
+    open func save(
         _ objects: [Storage],
         completion: @escaping EmptySaveDatabaseOperationCallback
     ) {
@@ -226,23 +226,22 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
     
     // MARK: Update
     
-    public func update(
+    open func update(
         _ object: Storage,
         using configuration: @escaping (Storage) -> Void
     ) throws {
         let context = try realm()
         
-        try UpdateObjectDatabaseOperation(object: object, in: context).apply {
-            $0.configurationClosure = configuration
+        let operation = try UpdateObjectDatabaseOperation(object: object, in: context)
+        operation.configurationClosure = configuration
             
-            try $0.execute()
-        }
+        try operation.execute()
     }
     
     
     // MARK: Delete
     
-    public func delete(_ object: Storage) throws {
+    open func delete(_ object: Storage) throws {
         let context = try realm()
         
         try DeleteFoundObjectDatabaseOperation(
@@ -251,7 +250,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func delete(_ objects: [Storage]) throws {
+    open func delete(_ objects: [Storage]) throws {
         let context = try realm()
         
         try DeleteFoundObjectsDatabaseOperation(
@@ -260,7 +259,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func delete(by id: ID) throws {
+    open func delete(by id: EntityID) throws {
         let context = try realm()
         
         try DeleteObjectDatabaseOperation<Storage>(
@@ -269,7 +268,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func delete(matching query: @escaping (Query) -> Void) throws  {
+    open func delete(matching query: @escaping (Query) -> Void) throws  {
         let realm = try self.realm()
         
         try DeleteObjectsDatabaseOperation<Storage>(
@@ -278,7 +277,7 @@ open class RealmPersistence<Storage: StorageSchemaObject> {
         ).execute()
     }
     
-    public func deleteAll() throws {
+    open func deleteAll() throws {
         let realm = try self.realm()
         
         try DeleteObjectsDatabaseOperation<Storage>(in: realm).execute()

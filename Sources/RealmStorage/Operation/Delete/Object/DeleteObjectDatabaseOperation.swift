@@ -14,13 +14,13 @@ public final class DeleteObjectDatabaseOperation<
     
     // MARK: - Properties
     
-    public let id: ID
+    public let id: EntityID
     
     
     // MARK: - Initialization
     
     public init(
-        by id: ID,
+        by id: EntityID,
         in context: Realm
     ) {
         self.id = id

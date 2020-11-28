@@ -15,11 +15,7 @@ public protocol StorageSchemaProvidable: class {
 
 public typealias StorageSchemaObject = StorageObject & StorageSchemaProvidable
 
-@objcMembers
 open class StorageObject: Object {
-    
-    // MARK: - Initialization
-    
     public required override init() {
         super.init()
     }

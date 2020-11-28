@@ -8,15 +8,24 @@
 import Foundation
 import RealmSwift
 
-public final class ReadFirstObjectDatabaseOperation<
+open class ReadFirstObjectDatabaseOperation<
     Storage: StorageSchemaObject
 >: QuearyableReadDatabaseOperation<Storage> {
     
     // MARK: - Appearance
     
-    public func first() -> Storage? {
+    open func first() -> Storage? {
         realmObjects()?.first
     }
 }
 
-public typealias ReadObjectDatabaseOperation<Storage: StorageSchemaObject> = ReadFirstObjectDatabaseOperation<Storage>
+open class ReadObjectDatabaseOperation<
+    Storage: StorageSchemaObject
+>: ReadFirstObjectDatabaseOperation<Storage> {
+    
+    // MARK: - Appearance
+    
+    open func get() -> Storage? {
+        first()
+    }
+}

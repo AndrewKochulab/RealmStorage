@@ -12,17 +12,12 @@ public final class DatabaseQueryCompoundPredicate<Schema: GeneratedPredicateSche
     // MARK: - Properties
     
     private let builder: PredicateBuilder
-    private let schema: Schema
     
     
     // MARK: - Initialization
     
-    public init(
-        builder: PredicateBuilder,
-        schema: Schema
-    ) {
+    public init(builder: PredicateBuilder) {
         self.builder = builder
-        self.schema = schema
     }
     
     
@@ -30,28 +25,28 @@ public final class DatabaseQueryCompoundPredicate<Schema: GeneratedPredicateSche
     
     @discardableResult
     public func and(_ condition: (Schema) -> PredicateResult) -> Self {
-        builder.and(condition(schema))
+        builder.and(condition(Schema()))
         
         return self
     }
     
     @discardableResult
     public func andNot(_ condition: (Schema) -> PredicateResult) -> Self {
-        builder.andNot(condition(schema))
+        builder.andNot(condition(Schema()))
         
         return self
     }
     
     @discardableResult
     public func or(_ condition: (Schema) -> PredicateResult) -> Self {
-        builder.or(condition(schema))
+        builder.or(condition(Schema()))
         
         return self
     }
     
     @discardableResult
     public func orNot(_ condition: (Schema) -> PredicateResult) -> Self {
-        builder.orNot(condition(schema))
+        builder.orNot(condition(Schema()))
         
         return self
     }
@@ -67,7 +62,6 @@ public final class DatabaseQuery<Schema: GeneratedPredicateSchema>: DatabaseQuer
         builder?.build()
     }
     
-    private lazy var schema = Schema()
     private(set) public lazy var sortDescriptors = [DatabaseSortDescriptor]()
     
     
@@ -82,24 +76,23 @@ public final class DatabaseQuery<Schema: GeneratedPredicateSchema>: DatabaseQuer
     public func add(
         _ condition: (Schema) -> PredicateResult
     ) -> DatabaseQueryCompoundPredicate<Schema> {
-        let builder = PredicateBuilder(condition(schema))
+        let builder = PredicateBuilder(condition(Schema()))
         self.builder = builder
         
         return DatabaseQueryCompoundPredicate(
-            builder: builder,
-            schema: schema
+            builder: builder
         )
     }
     
     public func sort(
         by sortDescriptors: (Schema) -> [DatabaseSortDescriptor]
     ) {
-        self.sortDescriptors.append(contentsOf: sortDescriptors(schema))
+        self.sortDescriptors.append(contentsOf: sortDescriptors(Schema()))
     }
     
     public func sort(
         by sortDescriptor: (Schema) -> DatabaseSortDescriptor
     ) {
-        self.sortDescriptors.append(sortDescriptor(schema))
+        self.sortDescriptors.append(sortDescriptor(Schema()))
     }
 }

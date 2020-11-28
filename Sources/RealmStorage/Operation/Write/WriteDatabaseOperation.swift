@@ -8,7 +8,7 @@
 import Foundation
 import RealmSwift
 
-open class WriteDatabaseOperation: Applyable {
+open class WriteDatabaseOperation {
     
     // MARK: - Properties
     

@@ -15,14 +15,18 @@ public final class RealmDatabaseContext {
     // MARK: - Properties
     // MARK: Content
     
-    private(set) lazy var thread = RealmDatabaseThread().apply {
-        $0.workingQueue = { [unowned self] key in
+    private(set) lazy var thread = RealmDatabaseThread()
+    private(set) lazy var queue = RealmDatabaseQueue()
+ 
+    
+    // MARK: - Initialization
+    
+    init() {
+        thread.workingQueue = { [unowned self] key in
             self.queue.get(by: key)
         }
     }
     
-    private(set) lazy var queue = RealmDatabaseQueue()
- 
     
     // MARK: - Appearance
     

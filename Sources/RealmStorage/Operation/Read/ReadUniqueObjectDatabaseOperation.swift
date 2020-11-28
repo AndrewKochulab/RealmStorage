@@ -14,12 +14,12 @@ public final class ReadUniqueObjectDatabaseOperation<
     
     // MARK: - Properties
     
-    public let id: ID
+    public let id: EntityID
     
     
     // MARK: - Initialization
     
-    public init(id: ID) {
+    public init(id: EntityID) {
         if Storage.self is IdentifiableStorageObject.Type {
             self.id = id
         } else {

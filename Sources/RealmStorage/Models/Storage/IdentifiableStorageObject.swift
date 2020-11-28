@@ -11,11 +11,12 @@ open class IdentifiableStorageObject: StorageObject {
     
     // MARK: - Properties
     
-    public var id: ID {
-        get { Identifier(value: identifier) }
+    public var id: EntityID {
+        get { EntityIdentifier(value: identifier) }
         set { identifier = newValue.value }
     }
     
+    @objc
     private dynamic var identifier = ""
     
     

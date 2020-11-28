@@ -8,7 +8,7 @@
 import Foundation
 import RealmSwift
 
-public final class DeleteFoundObjectDatabaseOperation<
+open class DeleteFoundObjectDatabaseOperation<
     Storage: StorageSchemaObject
 >: InTransactionWriteDatabaseOperation {
     
@@ -31,7 +31,7 @@ public final class DeleteFoundObjectDatabaseOperation<
     
     // MARK: - Appearance
     
-    public override func execute() throws {
+    open override func execute() throws {
         try container.write { transaction in
             transaction.delete(object: self.object)
         }

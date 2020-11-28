@@ -8,7 +8,7 @@
 import Foundation
 import RealmSwift
 
-final class RealmDatabaseThread: Applyable {
+final class RealmDatabaseThread {
     
     // MARK: - Types
     
