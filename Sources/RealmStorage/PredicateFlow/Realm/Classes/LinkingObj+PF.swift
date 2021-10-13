@@ -17,7 +17,7 @@ extension LinkingObjects {
         return filter(predicateResult.query())
     }
 
-    public func sorted(_ sortDescriptions: SortDescriptor...) -> Results<Element> {
+    public func sorted(_ sortDescriptions: RealmSwift.SortDescriptor...) -> Results<Element> {
         return sorted(by: sortDescriptions)
     }
 
