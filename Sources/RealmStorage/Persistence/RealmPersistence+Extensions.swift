@@ -16,7 +16,7 @@ public protocol DatabaseSortableCollection: RandomAccessCollection where Self.El
     // MARK: Appearance
     
     func sorted(
-        by sortDescriptors: [SortDescriptor]
+        by sortDescriptors: [RealmSwift.SortDescriptor]
     ) -> Results<Element>
     
     func sorted<S: Sequence>(
@@ -32,7 +32,7 @@ public extension DatabaseSortableCollection where Element: StorageObject {
     func sorted<S: Sequence>(
         by sortDescriptors: S
     ) -> Results<Element> where S.Iterator.Element == DatabaseSortDescriptor {
-        let sortDescriptors = sortDescriptors.compactMap { $0 as? SortDescriptor }
+        let sortDescriptors = sortDescriptors.compactMap { $0 as? RealmSwift.SortDescriptor }
         
         return self.sorted(by: sortDescriptors)
     }
