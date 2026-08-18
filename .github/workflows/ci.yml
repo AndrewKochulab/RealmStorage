@@ -15,7 +15,7 @@ jobs:
     name: Test (macOS)
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
       # newest installed Xcode rather than pinning a path that may not exist.
@@ -64,7 +64,7 @@ jobs:
       matrix:
         platform: [iOS, tvOS, watchOS]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
       # newest installed Xcode rather than pinning a path that may not exist.
@@ -85,7 +85,7 @@ jobs:
     name: Test (iOS Simulator)
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
       # newest installed Xcode rather than pinning a path that may not exist.
@@ -117,7 +117,7 @@ jobs:
     name: SwiftLint
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
       # newest installed Xcode rather than pinning a path that may not exist.
@@ -136,7 +136,7 @@ jobs:
     name: Thread Sanitizer
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
       # newest installed Xcode rather than pinning a path that may not exist.
