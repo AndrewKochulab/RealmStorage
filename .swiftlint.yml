@@ -1,0 +1,39 @@
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+
+disabled_rules:
+  - todo
+  # Fires on Realm's query DSL, where `$0.events.count == 0` is a predicate
+  # expression rather than a collection emptiness check.
+  - empty_count
+
+opt_in_rules:
+  - explicit_init
+  - first_where
+  - last_where
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  # `id` is the natural name for a primary key.
+  min_length: 2
+  excluded: [id]
+
+type_name:
+  min_length: 3
+
+file_length:
+  warning: 500
+  error: 800

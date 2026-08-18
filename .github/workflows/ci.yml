@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [master, "1.x"]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (macOS)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build
+        run: swift build -v
+
+      - name: Test
+        run: swift test -v
+
+      # A warning-free build is only useful if new warnings stay visible.
+      - name: Build with warnings as errors
+        run: swift build -Xswiftc -warnings-as-errors
+
+  platforms:
+    name: Build (${{ matrix.platform }})
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [iOS, tvOS, watchOS]
+    steps:
+      - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -scheme RealmStorage \
+            -destination "generic/platform=${{ matrix.platform }}" \
+            -quiet
+
+  simulator-tests:
+    name: Test (iOS Simulator)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
+      # Device names differ between runner images, so pick whatever iPhone
+      # simulator this one actually has rather than naming one.
+      - name: Pick a simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for r in sorted(d) for x in d[r] if 'iPhone' in x['name']))")
+          echo "Using simulator $udid"
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+
+      # The Keychain integration test needs a real Keychain, which a bare
+      # `swift test` process does not get; there it records a known issue.
+      - name: Test
+        run: |
+          xcodebuild test \
+            -scheme RealmStorage \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -quiet
+
+  lint:
+    name: SwiftLint
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+      - name: Lint
+        run: swiftlint lint --strict
+
+  thread-sanitizer:
+    name: Thread Sanitizer
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
+      # 1.x raced on an unsynchronised Realm cache; TSan would have caught it.
+      - name: Test under TSan
+        run: swift test --sanitize=thread

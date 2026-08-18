@@ -1,264 +1,301 @@
 # RealmStorage
 
-Modern wrapper for Realm Database [iOS, macOS, tvOS &amp; watchOS]
+[![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%2013%20%7C%20macOS%2010.15%20%7C%20tvOS%2013%20%7C%20watchOS%206-lightgrey.svg)](https://swift.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Quick usage
+A modern wrapper for [Realm](https://github.com/realm/realm-swift) — actor-isolated, async/await only, and safe under Swift 6 strict concurrency.
 
-An easy way to write code like below, strong-typed fetch queries, fast-developing data layer, multithreading, and much more interesting things.
+```swift
+let store = RealmStore(
+    configuration: StorageConfiguration(schemaVersion: 1, objectTypes: [User.self])
+)
+try await store.open()
 
-````swift
-let users = DB.user().objects { query in
-   query.add { $0.firstName.isEqual("Robert") }
-        .and { $0.events.count().isGreater(thanOrEqual: 5) }
-        .and(\.updatedAt.isNotNil)
-}.get()
-````
+let users = try await store.objects(User.self) {
+    $0.firstName == "Robert" && $0.events.count >= 5 && $0.updatedAt != nil
+}
+```
+
+> **Upgrading from 1.x?** 2.0 is a rewrite. See [MIGRATION.md](MIGRATION.md) for a step-by-step guide. The 1.x line remains available on the `1.x` branch and at tag `1.0.5`.
 
 ## Features
 
-`RealmStorage` supports the following operations:
+- **Actor-isolated.** One `actor` owns the Realm; there is no shared mutable global and no thread-confinement bookkeeping to get wrong.
+- **Swift 6 clean.** Builds in Swift 6 language mode with zero warnings and no `@unchecked` conformances on Realm's own types.
+- **async/await only.** No completion handlers.
+- **Type-safe queries** built on Realm's native `Query` — no code generation, no build phase, no generated file.
+- **Live observation** through `AsyncThrowingStream`, plus a main-actor façade for SwiftUI.
+- **Encryption at rest**, with the key held in the Keychain and provisioned automatically.
+- **One dependency** — realm-swift, and nothing else.
 
-- Schemas autogeneration
-- Built-in database migration
-- Multithreading
-- Strong-typed fetch queries
-- Write transactions
-- All CRUD operations 
+## Installation
 
+### Swift Package Manager
 
-## How to use
-### Installation
+```swift
+.package(url: "https://github.com/AndrewKochulab/RealmStorage.git", from: "2.0.0")
+```
 
-To add `RealmStorage` to a  [Swift Package Manager](https://swift.org/package-manager/)  based project, add:
+Then add `RealmStorage` to your target's dependencies.
 
-````swift
-.package(url: "https://github.com/AndrewKochulab/RealmStorage.git")
-````
+### CocoaPods
 
-Cocoapods:
+```ruby
+pod 'RealmStorage', '~> 2.0'
+```
 
-````
-pod 'RealmStorage'
-````
+No build phase is required. 1.x needed a Sourcery run to generate query schemas; 2.0 does not.
 
-Create a new build phase `Project -> Main Target -> Build Phases` and add the next code:
+## Defining models
 
-````
-"$PODS_ROOT/Sourcery/bin/sourcery" --sources "$PODS_ROOT/RealmStorage/Sources/RealmStorage/PredicateFlow/Core/Classes/Utils/" --sources "$SRCROOT" --templates "$PODS_ROOT/RealmStorage/Sources/RealmStorage/PredicateFlow/Core/Templates/PredicateFlow.stencil" --output "$SRCROOT/PredicateFlow.generated.swift" --disableCache
-````
+Models are ordinary Realm objects using `@Persisted`, marked with `StorageObject` — or `IdentifiableStorage` when they have a primary key.
 
-Import `PredicateFlow.generated.swift` file to your Main target.
-
-It will automatically generate all schemas needed for fetch database queries (see details below).
-
-### Example
-
-#### Create Tables
-
-````swift
+```swift
 import RealmSwift
 import RealmStorage
 
-final class User: IdentifiableStorageObject, PredicateSchema {
-  enum Gender: String {
-    case male, female
-  }
-  
-  dynamic var createdAt = Date()
-  dynamic var updatedAt: Date?
-    
-  dynamic var firstName = ""
-  dynamic var lastName = ""
-    
-  private dynamic var genderName = ""
-    
-  var gender: Gender? {
-    get { Gender(rawValue: genderName) }
-    set { genderName = newValue?.rawValue ?? "" }
-  }
-    
-  let events = List<Event>()
+final class User: Object, IdentifiableStorage {
+    @Persisted(primaryKey: true) var id: UUID
+    @Persisted var firstName: String
+    @Persisted var lastName: String
+    @Persisted var age: Int
+    @Persisted var createdAt: Date
+    @Persisted var updatedAt: Date?
+    @Persisted var events: List<Event>
 }
 
-final class Event: IdentifiableStorageObject, PredicateSchema {
-  dynamic var date: Date?
-  dynamic var name = ""
-  dynamic var author: User?
-    
-  let members = List<EventMember>()
+final class Event: Object, IdentifiableStorage {
+    @Persisted(primaryKey: true) var id: UUID
+    @Persisted var name: String
+    @Persisted var date: Date?
 }
+```
 
-final class EventMember: IdentifiableStorageObject, PredicateSchema {
-  dynamic var joinedAt = Date()
-  dynamic var user: User? {
-    didSet {
-      updateCompoundID()
+`IdentifiableStorage` takes the key's type from your `id` property, so `String`, `Int`, `UUID` and `ObjectId` all work. Looking an object up by id on a type without a primary key is a compile error.
+
+For a composite key, build the string with `CompoundID`:
+
+```swift
+final class EventMember: Object, IdentifiableStorage {
+    @Persisted(primaryKey: true) var id: String
+    @Persisted var user: User?
+    @Persisted var event: Event?
+
+    func updateCompoundID() {
+        guard let user, let event else { return }
+        id = CompoundID.make(user.id.uuidString, event.id.uuidString)
     }
-  }
-    
-  dynamic var event: Event? {
-    didSet {
-      updateCompoundID()
-    }
-  }
-    
-  private func updateCompoundID() {
-    guard let user = user,
-      let event = event else {
-        return
-    }
-        
-    self.id = CompoundID(
-      items: user.id.value, event.id.value,
-      separator: "_"
+}
+```
+
+## Opening a store
+
+```swift
+let store = RealmStore(
+    configuration: StorageConfiguration(
+        schemaVersion: 1,
+        objectTypes: [User.self, Event.self, EventMember.self]
     )
-  }
-}
-````
+)
 
-#### Autogenerated-schema code looks like
+try await store.open()
+```
 
-Thanks, Andrea Del Fante for PredicateFlow library.
-See repository: https://github.com/andreadelfante/PredicateFlow
+`StorageConfiguration` is a `Sendable` value. The defaults are chosen so that the safe thing happens without configuration:
 
-````swift
-/// The "User" Predicate Schema
-internal struct UserSchema: GeneratedPredicateSchema {
-    internal var identifier: StringPredicateProperty { return builder.string("identifier") }
-    internal var createdAt: PredicateProperty<Date> { return builder.generic("createdAt") }
-    internal var updatedAt: PredicateProperty<Date> { return builder.generic("updatedAt") }
-    internal var firstName: StringPredicateProperty { return builder.string("firstName") }
-    internal var lastName: StringPredicateProperty { return builder.string("lastName") }
-    internal var genderName: StringPredicateProperty { return builder.string("genderName") }
-    internal var events: CollectionProperty<EventSchema> { return builder.collection("events") }
-}
-````
+| | Default | Why |
+|---|---|---|
+| `location` | `.applicationSupport` | Not user-visible, and excluded from backup by default |
+| `fileProtection` | `.completeUntilFirstUserAuthentication` | Data protection stays on, while background launches still work |
+| `excludedFromBackup` | `true` | The encryption key is device-only; a restored backup would have no key for the file |
+| `corruptionPolicy` | `.rethrow` | Nothing is ever deleted without you asking |
+| `encryption` | `.none` | Opt in explicitly |
 
-#### Save objects in transaction
+### Encryption
 
-````swift
-let user = User().apply {
-  $0.id = Identifier(value: "user_id")
-  $0.firstName = "Steve"
-  $0.lastName = "Rogers"
-  $0.gender = .male
-}
+```swift
+let configuration = StorageConfiguration(
+    schemaVersion: 1,
+    encryption: .keychain(store: KeychainSecretStore()),
+    objectTypes: [User.self]
+)
+```
 
-let event = Event().apply {
-  $0.id = Identifier(value: "event_id")
-  $0.name = "Avengers Game"
-  $0.date = Date().addingTimeInterval(3600 * 10)
-  $0.author = user
-}
+A 64-byte key is generated on first launch and kept in the Keychain as `afterFirstUnlockThisDeviceOnly`, so a background launch on a locked device can still open the database. If an unencrypted database already exists, it is copied into the encrypted file and the plaintext one is removed.
 
-let eventMember = EventMember().apply {
-  $0.event = event
-  $0.user = user
-}.apply {
-  event.members.append($0)
-}
+You can supply your own key with `.key(_:)`, or your own storage by conforming to `SecretStore`.
 
-try DB.perform { transaction in
-  transaction.add(
-    objects: [user, event, eventMember],
-    update: false
-  )
-}
-````
+## Querying
 
-#### Update objects in transaction
+Queries are composable values built on Realm's native type-safe `Query`.
 
-````swift
-func update(user: User) throws {
-  try DB.user().update(user) {
-    $0.firstName = "Tony"
-    $0.lastName = "Stark"
-  }
-}
-    
-func update(event: Event, newDate: Date) throws {
-  try DB.event().update(event) {
-    $0.date = newDate
-  }
-}
-````
+```swift
+let query = DatabaseQuery<User>()
+    .where { $0.firstName == "Robert" && $0.events.count >= 5 }
+    .sorted(by: \.createdAt, ascending: false)
+    .limited(to: 20)
 
-#### Sync fetch operations
+let users = try await store.objects(User.self, matching: query)
+```
 
-````swift
-let users = DB.user().objects { query in
-   query.add { $0.firstName.isEqual("Robert") }
-        .and { $0.events.count().isGreater(thanOrEqual: 5) }
-        .and(\.updatedAt.isNotNil)
-}.get()
+Building on a query returns a new one, so a shared base is safe to hold and extend.
 
-let user = DB.user().object(by: Identifier(value: "user_id"))
+For a one-off filter, pass the closure directly:
 
-let lastEvent = DB.event().last()
-let allEvents = DB.event().all().get()
-````
+```swift
+let adults = try await store.objects(User.self) { $0.age >= 18 }
+```
 
+### Reading
 
-#### Async fetch operations
+```swift
+let all      = try await store.all(User.self)
+let user     = try await store.object(User.self, id: someUUID)
+let first    = try await store.first(User.self, matching: query)
+let total    = try await store.count(User.self)
+let anyMatch = try await store.contains(User.self, matching: query)
+```
 
-````swift
-DB.event().first { event in
-  if event != nil {
-    // do actions
-  }
-}
-        
-DB.event().objects(matching: { query in
-  query.add { $0.members.count() > 1000 }
-  query.sort(by: { $0.date.ascending() })
-}, completion: { operation in
-  let events = operation.get()
-  
-  // do some actions
-  for event in events {
-    print(event.description)
-  }
-})
-````
+Reads return frozen values, so they are safe to pass anywhere. `StorageResults` stays lazy — call `.array()` when you want everything materialised. Single objects come back as `Frozen<Element>`, which reads through to the object, so `user?.firstName` works as written.
 
-#### Create own read operations
+To get plain value types out instead, map inside the store:
 
-````swift
-final class ReadCurrentSubscriptionsDatabaseOperation: ReadObjectsDatabaseOperation<Subscription> {
-  init(shouldThreadSafe isThreadSafe: Bool = false) {
-    super.init(matching: { query in
-      query.add(\.hasExpired.isFalse)
-      query.sort(by: { $0.expiresAt.descending() })
-    }, shouldThreadSafe: isThreadSafe)
-  }
+```swift
+let names = try await store.objects(User.self, matching: query) { $0.firstName }
+```
+
+### Writing
+
+```swift
+try await store.save(User(id: UUID(), firstName: "Steve"))
+try await store.save([userA, userB], update: .modified)
+
+try await store.update(User.self, id: userID) { user in
+    user.firstName = "Tony"
 }
 
-extension SubscriptionPersistence { 
-  func current() -> [Subscription] { 
-    ReadCurrentSubscriptionsDatabaseOperation().get()
-  }
+try await store.delete(User.self, id: userID)
+try await store.delete(User.self, matching: DatabaseQuery { $0.isActive == false })
+```
+
+For several changes in one transaction:
+
+```swift
+try await store.write { realm in
+    realm.add(user, update: .modified)
+    realm.add(event, update: .modified)
+}
+```
+
+A throwing block rolls the whole transaction back.
+
+### Observing
+
+```swift
+for try await change in await store.changes(of: User.self, matching: query) {
+    switch change {
+    case .initial(let users):
+        render(users)
+    case .update(let users, let deletions, let insertions, let modifications):
+        apply(users, deletions, insertions, modifications)
+    }
+}
+```
+
+Payloads are frozen. Ending the loop invalidates the notification token.
+
+### SwiftUI
+
+`RealmStore` hands back frozen snapshots, which is what makes it safe to share — but SwiftUI wants live, auto-updating results. `MainRealmStore` provides those, pinned to the main actor:
+
+```swift
+@MainActor
+final class UserListModel: ObservableObject {
+    private let store = MainRealmStore(
+        configuration: StorageConfiguration(objectTypes: [User.self])
+    )
+
+    @Published var users: Results<User>?
+
+    func load() async throws {
+        try await store.open()
+        users = try store.objects(User.self) { $0.isActive == true }
+    }
+}
+```
+
+Both types can point at the same `StorageConfiguration`.
+
+## Migrations
+
+Express each schema change as a step; RealmStorage runs the ones that apply, in order.
+
+```swift
+let migrator = SchemaMigrator {
+    SchemaMigrationStep(toVersion: 2) { migration in
+        migration.renameProperty(onType: "User", from: "name", to: "firstName")
+    }
+    SchemaMigrationStep(toVersion: 3) { migration in
+        migration.enumerateObjects(ofType: "User") { _, new in
+            new?["isActive"] = true
+        }
+    }
 }
 
-let currentSubscriptions = DB.subscription().current()
+var configuration = StorageConfiguration(schemaVersion: 3, objectTypes: [User.self])
+configuration.migrate = migrator.migrationBlock
+```
 
-// or 
+## Query reference
 
-let currentSubscriptions = DB.subscription().objects(matching: { query in
-  query.add(\.hasExpired.isFalse)
-  query.sort(by: { $0.expiresAt.descending() })
-}).get()
-````
+Realm's `Query` covers everything the 1.x PredicateFlow layer did:
 
+| Need | Write |
+|---|---|
+| Equality | `$0.name == "Robert"`, `$0.name != "Robert"` |
+| Membership | `$0.name.in(["Robert", "Tony"])` |
+| Comparison | `$0.age > 30`, `$0.age <= 30` |
+| Optionals | `$0.updatedAt != nil` |
+| Booleans | `$0.isActive == true` |
+| Strings | `.contains`, `.starts(with:)`, `.ends(with:)`, `.like` |
+| Case / diacritics | `$0.name.contains("rob", options: .caseInsensitive)` |
+| Negation | `!$0.name.contains("x")` |
+| Compound | `&&`, `\|\|` |
+| Collections | `$0.events.count >= 5`, `.min`, `.max`, `.avg`, `.sum` |
+| Relationships | `$0.events.name == "Talk"` (implicit ANY) |
 
-## Contribution
+For anything left over — `SUBQUERY(...).@count`, `NONE`, `BETWEEN` — drop to a predicate:
+
+```swift
+DatabaseQuery<User>().filter {
+    NSPredicate(format: "SUBQUERY(events, $e, $e.name == %@).@count > 1", "Talk")
+}
+```
+
+> **Realm's own limits.** Realm's query engine rejects the `ALL` modifier and `MATCHES` (regular expressions) in every form, and supports only `AND`, `OR` and `NOT` compound predicates. RealmStorage 1.x exposed `all(_:)` and `matches(_:)` through PredicateFlow, but neither ever worked against a Realm database. An unsupported predicate raises an Objective-C exception rather than throwing, so it cannot be caught — cover raw predicates with a test.
+
+## Requirements
+
+| | |
+|---|---|
+| Swift | 6.0+ |
+| Xcode | 26.0+ |
+| Platforms | iOS 13+, macOS 10.15+, tvOS 13+, watchOS 6+ |
+| Realm | realm-swift 20.x |
+
+RealmStorage builds in Swift 6 language mode. Because language mode is per-target, your own code can stay on Swift 5.
+
+### A note on Realm
+
+MongoDB no longer distributes Realm. [realm-swift](https://github.com/realm/realm-swift) 20.x is community-maintained and local-only — Atlas Device Sync was removed. RealmStorage has always been a local-persistence wrapper, so nothing it offered depended on sync.
+
+## Contributing
 
 ⭐️ If you like what you see, star us on GitHub.
 
-Find a bug, a typo, or something that’s not documented well? We’d love for you to open an issue telling me what I can improve!
-
-Contributions are welcome, and they are greatly appreciated!
-
+Found a bug, a typo, or something documented badly? Please open an issue. Contributions are welcome and appreciated.
 
 ## License
 
-This code is distributed under the MIT license. See the  `LICENSE`  file for more info.
+MIT. See [LICENSE](LICENSE).
