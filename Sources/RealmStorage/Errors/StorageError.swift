@@ -51,9 +51,6 @@ public enum StorageError: Error, Sendable {
 
     /// A primary-key lookup found no object.
     case objectNotFound
-
-    /// The object was deleted from the database while still referenced.
-    case objectWasRemoved
 }
 
 extension StorageError: LocalizedError {
@@ -78,8 +75,6 @@ extension StorageError: LocalizedError {
             return "The database was unrecoverable and has been reset: \(underlying.localizedDescription)"
         case .objectNotFound:
             return "No object matches that primary key."
-        case .objectWasRemoved:
-            return "The object was removed from the database."
         }
     }
 }

@@ -3,6 +3,39 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] — 2026-08-18
+
+### Fixed
+
+- **`limited(to:)` was ignored by most of the API, including `delete`.** The limit was applied only by `objects`, the `transform:` overload and the change stream. Everywhere else — `count`, `contains`, `first`, `last`, `update(matching:)` and `delete(matching:)` — it was silently dropped, so `delete(_:matching: query.limited(to: 2))` deleted **every** match rather than two. Realm has no native `LIMIT`, so the cap has to be applied in `QueryPlan`; every entry point now goes through it, and the whole surface is covered by tests.
+- **`CorruptionPolicy.deleteAndRecreate` never fired.** It matched `error as? Realm.Error`, but Realm reports these as an `NSError` in the `io.realm` domain, so the cast always failed and the policy silently behaved like `.rethrow`. Detection now matches on domain and code.
+- **Recovery could not delete the file it was recovering from.** The resolved file path was recorded only *after* a successful open, so `reset()` had nothing to remove when an open failed — meaning `deleteAndRecreate` could not have worked even once detection was fixed. The path is now recorded before opening, and a failed retry surfaces its own error.
+- A negative `limited(to:)` is clamped to zero instead of trapping.
+
+### Added
+
+- `changes(of:id:)` — an `AsyncThrowingStream` of changes to a single object, reporting which properties changed and finishing on deletion.
+- `objects(_:ids:)` — batch lookup by primary key.
+- `writeCopy(to:encryptionKey:)` — a compacted copy of the database, optionally encrypted, for backups and support bundles.
+- `fileSize()` — the database's size on disk.
+- `StorageLocation.file(_:)` — open a database at an exact path, bypassing the `_encrypted` naming convention and the automatic plaintext-to-encrypted migration. This is what makes a restored backup or a bundled seed database usable.
+- `StorageConfiguration.shouldCompactOnLaunch` and `.deleteRealmIfMigrationNeeded`.
+
+### Changed
+
+- `DatabasePreparer` now owns directory resolution, encryption setup and file migration for both stores. `MainRealmStore` previously kept a whole second `RealmStore` open purely to learn its configuration; it now opens one Realm instead of two.
+- `CorruptionPolicy.isUnrecoverable` is documented as, and limited to, `RLMErrorInvalidDatabase` and `RLMErrorUnsupportedFileFormatVersion`. Schema mismatches are deliberately excluded — a missing migration is a developer error, not a reason to delete a user's data; `deleteRealmIfMigrationNeeded` is the explicit opt-in for that.
+
+### Removed
+
+- The unused `StorageError.objectWasRemoved` case and an unreachable `QueryPlan` overload.
+
+### Repository
+
+- `CONTRIBUTING.md`, issue forms, a pull-request template, and Dependabot for Actions.
+- `.spi.yml`, so Swift Package Index builds documentation for the package.
+- Code-coverage reporting in CI (currently ~90% of lines).
+
 ## [2.0.0] — 2026-08-18
 
 A rewrite. See [MIGRATION.md](MIGRATION.md) for an upgrade guide.
@@ -88,6 +121,7 @@ Released from the 1.x maintenance branch. No source changes.
 
 Initial public releases (`1.0.0`–`1.0.4`).
 
+[2.1.0]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/2.1.0
 [2.0.0]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/2.0.0
 [1.0.5]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/1.0.5
 [1.0.4]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/1.0.4

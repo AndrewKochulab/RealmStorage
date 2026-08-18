@@ -131,3 +131,83 @@ struct ConfigurationTests {
         #expect(store.configuration.schemaVersion == 7)
     }
 }
+
+/// `.file(_:)` bypasses the naming convention and the plaintext-to-encrypted migration,
+/// which is what makes it usable for a restored backup or a bundled seed database.
+@Suite("Explicit file location")
+struct ExplicitFileLocationTests {
+
+    @Test("the file is used exactly as given")
+    func exactPath() async throws {
+        try await TestStore.withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("custom-name.realm")
+
+            let store = RealmStore(
+                configuration: StorageConfiguration(
+                    location: .file(fileURL),
+                    fileProtection: nil,
+                    excludedFromBackup: false,
+                    objectTypes: TestModels.all
+                )
+            )
+            try await store.open()
+            try await store.save(User(id: "u1"))
+
+            #expect(FileManager.default.fileExists(atPath: fileURL.path))
+        }
+    }
+
+    @Test("an encrypted file keeps its own name rather than gaining a suffix")
+    func encryptedKeepsName() async throws {
+        try await TestStore.withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("vault.realm")
+            let key = try EncryptionKeyProvider.generateKey()
+
+            func makeStore() -> RealmStore {
+                RealmStore(
+                    configuration: StorageConfiguration(
+                        location: .file(fileURL),
+                        encryption: .key(key),
+                        fileProtection: nil,
+                        excludedFromBackup: false,
+                        objectTypes: TestModels.all
+                    )
+                )
+            }
+
+            let store = makeStore()
+            try await store.open()
+            try await store.save(User(id: "u1", firstName: "Secret"))
+            await store.close()
+
+            // No `vault_encrypted.realm`, and reopening finds the same data.
+            let suffixed = directory.appendingPathComponent("vault_encrypted.realm")
+            #expect(!FileManager.default.fileExists(atPath: suffixed.path))
+
+            let reopened = makeStore()
+            try await reopened.open()
+            #expect(try await reopened.object(User.self, id: "u1")?.firstName == "Secret")
+        }
+    }
+
+    @Test("the containing directory is created if missing")
+    func createsParentDirectory() async throws {
+        try await TestStore.withTemporaryDirectory { directory in
+            let fileURL = directory
+                .appendingPathComponent("nested/deeper")
+                .appendingPathComponent("db.realm")
+
+            let store = RealmStore(
+                configuration: StorageConfiguration(
+                    location: .file(fileURL),
+                    fileProtection: nil,
+                    excludedFromBackup: false,
+                    objectTypes: TestModels.all
+                )
+            )
+            try await store.open()
+
+            #expect(FileManager.default.fileExists(atPath: fileURL.path))
+        }
+    }
+}

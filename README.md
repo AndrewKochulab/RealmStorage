@@ -124,6 +124,8 @@ let configuration = StorageConfiguration(
 
 A 64-byte key is generated on first launch and kept in the Keychain as `afterFirstUnlockThisDeviceOnly`, so a background launch on a locked device can still open the database. If an unencrypted database already exists, it is copied into the encrypted file and the plaintext one is removed.
 
+With encryption on, the file is named `<fileName>_encrypted.realm` — the suffix is what makes that one-time migration from a 1.x plaintext database possible. Use `StorageLocation.file(_:)` when you want to name the file yourself.
+
 You can supply your own key with `.key(_:)`, or your own storage by conforming to `SecretStore`.
 
 ## Querying
@@ -141,6 +143,9 @@ let users = try await store.objects(User.self, matching: query)
 
 Building on a query returns a new one, so a shared base is safe to hold and extend.
 
+`limited(to:)` applies everywhere the query is used — reads and writes alike — so
+`delete(_:matching: query.limited(to: 5))` removes at most five objects.
+
 For a one-off filter, pass the closure directly:
 
 ```swift
@@ -152,6 +157,7 @@ let adults = try await store.objects(User.self) { $0.age >= 18 }
 ```swift
 let all      = try await store.all(User.self)
 let user     = try await store.object(User.self, id: someUUID)
+let some     = try await store.objects(User.self, ids: [idA, idB])
 let first    = try await store.first(User.self, matching: query)
 let total    = try await store.count(User.self)
 let anyMatch = try await store.contains(User.self, matching: query)
@@ -205,6 +211,20 @@ for try await change in await store.changes(of: User.self, matching: query) {
 
 Payloads are frozen. Ending the loop invalidates the notification token.
 
+To watch one object instead, pass its primary key. The stream reports which properties
+changed, and finishes once the object is deleted:
+
+```swift
+for try await change in await store.changes(of: User.self, id: userID) {
+    switch change {
+    case .initial(let user), .change(let user, _):
+        render(user)
+    case .deleted:
+        dismiss()
+    }
+}
+```
+
 ### SwiftUI
 
 `RealmStore` hands back frozen snapshots, which is what makes it safe to share — but SwiftUI wants live, auto-updating results. `MainRealmStore` provides those, pinned to the main actor:
@@ -226,6 +246,34 @@ final class UserListModel: ObservableObject {
 ```
 
 Both types can point at the same `StorageConfiguration`.
+
+## Backups and maintenance
+
+`writeCopy` produces a compacted copy — useful for backups, support bundles, or shipping a
+seed database:
+
+```swift
+try await store.writeCopy(to: backupURL)                        // plaintext
+try await store.writeCopy(to: backupURL, encryptionKey: key)    // encrypted
+```
+
+Open a copy again with `StorageLocation.file(_:)`, which uses the path exactly as given
+rather than applying the usual naming convention:
+
+```swift
+let restored = RealmStore(
+    configuration: StorageConfiguration(location: .file(backupURL), objectTypes: [User.self])
+)
+```
+
+Realm files only grow, so a long-lived database with heavy churn can accumulate dead
+space. `fileSize()` tells you how much, and compaction is opt-in:
+
+```swift
+configuration.shouldCompactOnLaunch = { total, used in
+    total > 100 * 1024 * 1024 && Double(used) / Double(total) < 0.5
+}
+```
 
 ## Migrations
 
@@ -294,7 +342,7 @@ MongoDB no longer distributes Realm. [realm-swift](https://github.com/realm/real
 
 ⭐️ If you like what you see, star us on GitHub.
 
-Found a bug, a typo, or something documented badly? Please open an issue. Contributions are welcome and appreciated.
+Found a bug, a typo, or something documented badly? Please open an issue. Contributions are welcome and appreciated — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to get set up and what the tests expect.
 
 ## License
 

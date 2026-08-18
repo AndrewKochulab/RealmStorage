@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Upgrading from RealmStorage 1.x
+    url: https://github.com/AndrewKochulab/RealmStorage/blob/master/MIGRATION.md
+    about: The migration guide covers the query, model and API changes in 2.0.
+  - name: Realm itself
+    url: https://github.com/realm/realm-swift/issues
+    about: For questions about Realm's own behaviour, query engine or file format.

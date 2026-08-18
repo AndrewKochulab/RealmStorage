@@ -37,34 +37,71 @@ public final class MainRealmStore {
     public nonisolated let configuration: StorageConfiguration
 
     private var realm: Realm?
-    private let backing: RealmStore
+    private let preparer: DatabasePreparer
+    private var resolvedFileURL: URL?
 
     // MARK: - Initialization
 
     public init(configuration: StorageConfiguration) {
         self.configuration = configuration
-        self.backing = RealmStore(configuration: configuration)
+        self.preparer = DatabasePreparer(configuration: configuration)
     }
 
     // MARK: - Lifecycle
 
     /// Opens the database on the main actor.
     ///
-    /// File migration, encryption setup and the corruption policy are handled by a
-    /// backing ``RealmStore``, so behaviour matches exactly.
+    /// Directory resolution, encryption setup and plaintext-to-encrypted file migration
+    /// go through the same ``DatabasePreparer`` as ``RealmStore``, so the two agree
+    /// exactly on where the file is and how it is protected — and this opens only one
+    /// Realm rather than holding a second store open behind it.
     public func open() async throws {
         guard realm == nil else { return }
 
-        try await backing.open()
+        do {
+            try await openRealm()
+        } catch {
+            guard configuration.corruptionPolicy.shouldReset(after: error) else {
+                throw StorageError.openFailed(underlying: error)
+            }
 
-        let realmConfiguration = try await backing.currentRealmConfiguration()
-        realm = try await Realm(configuration: realmConfiguration, actor: MainActor.shared)
+            try reset()
+
+            do {
+                try await openRealm()
+            } catch let retryError {
+                // Recovery did not help; surface the second failure, wrapped.
+                throw StorageError.openFailed(underlying: retryError)
+            }
+
+            throw StorageError.databaseWasReset(underlying: error)
+        }
     }
 
-    /// Closes the database.
-    public func close() async {
+    /// Closes the database. A later ``open()`` reopens it.
+    public func close() {
         realm = nil
-        await backing.close()
+    }
+
+    /// Deletes the database and every sidecar file.
+    public func reset() throws {
+        realm = nil
+
+        guard let resolvedFileURL else { return }
+        try FileStorageMigrator().removeDatabase(at: resolvedFileURL)
+    }
+
+    private func openRealm() async throws {
+        let prepared = try preparer.prepare()
+
+        // Record the path *before* opening. `reset()` needs it to delete a file that
+        // failed to open, and assigning it afterwards left recovery with nothing to
+        // remove — so `CorruptionPolicy.deleteAndRecreate` could never actually recover.
+        resolvedFileURL = prepared.fileURL
+
+        realm = try await Realm(configuration: prepared.realmConfiguration, actor: MainActor.shared)
+
+        try preparer.applyFileAttributes(to: prepared.fileURL)
     }
 
     // MARK: - Access
@@ -80,7 +117,7 @@ public final class MainRealmStore {
         _ type: Element.Type,
         matching query: DatabaseQuery<Element> = .init()
     ) throws -> Results<Element> {
-        QueryPlan.resolve(query, in: try requireRealm())
+        QueryPlan.results(query, in: try requireRealm())
     }
 
     /// Live results matching a type-safe predicate.

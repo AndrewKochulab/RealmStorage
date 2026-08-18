@@ -23,8 +23,18 @@ public enum StorageLocation: Sendable, Equatable {
     /// `~/Library/Application Support` — recommended for new databases.
     case applicationSupport
 
-    /// A caller-supplied directory.
+    /// A caller-supplied directory. The file is named from
+    /// ``StorageConfiguration/fileName``, and the plaintext-to-encrypted migration
+    /// applies.
     case directory(URL)
+
+    /// A specific file, used exactly as given.
+    ///
+    /// Unlike the directory cases, this bypasses both the naming convention (including
+    /// the `_encrypted` suffix) and the automatic plaintext-to-encrypted migration. Use
+    /// it to open a database whose path you already know — a restored backup, a seed
+    /// database shipped in your bundle, or a file another tool produced.
+    case file(URL)
 
     /// An in-memory database with the given identifier.
     ///
@@ -33,6 +43,12 @@ public enum StorageLocation: Sendable, Equatable {
     /// - Note: An in-memory Realm is destroyed once its last reference is released,
     ///   so the owning ``RealmStore`` must stay alive for as long as the data matters.
     case inMemory(identifier: String)
+
+    /// The exact file to open, when the location names one.
+    var explicitFileURL: URL? {
+        guard case .file(let url) = self else { return nil }
+        return url
+    }
 
     /// Resolves the containing directory, creating it when necessary.
     ///
@@ -43,6 +59,10 @@ public enum StorageLocation: Sendable, Equatable {
         switch self {
         case .inMemory:
             return nil
+        case .file(let url):
+            let directory = url.deletingLastPathComponent()
+            try createDirectoryIfNeeded(at: directory, using: fileManager)
+            return directory
         case .directory(let url):
             try createDirectoryIfNeeded(at: url, using: fileManager)
             return url

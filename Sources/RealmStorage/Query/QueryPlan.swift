@@ -6,39 +6,30 @@
 import Foundation
 import RealmSwift
 
-/// Turns a ``DatabaseQuery`` into `Results`.
+/// Turns a ``DatabaseQuery`` into results.
 ///
-/// This is the one piece of genuinely shared logic that v1 spread across eighteen
+/// This is the one piece of genuinely shared logic that 1.x spread across eighteen
 /// `*DatabaseOperation` classes — each of them a single method over an inherited
 /// `configuredResults()`. Everything else those classes did (`count()`, `first()`,
 /// `last()`, `get()`) is now a method on ``RealmStore``.
+///
+/// Every read and write goes through here, which is what keeps `limited(to:)` meaning
+/// the same thing everywhere. Realm has no native `LIMIT`, so the cap has to be applied
+/// by this type; routing one call site around it silently ignores the limit.
 enum QueryPlan {
 
-    /// Applies `query` to every object of its type in `realm`.
-    static func resolve<Element: Object>(
+    /// Filtered and sorted results, **without** the query's limit applied.
+    ///
+    /// Realm's `Results` is a live view and cannot itself be truncated, so this is the
+    /// right input for change observation, which needs the live collection. Anything
+    /// that answers a question about "the objects this query selects" must go through
+    /// ``elements(_:in:)``, ``count(_:in:)``, ``first(_:in:)`` or ``last(_:in:)``
+    /// instead, so the limit is honoured.
+    static func results<Element: Object>(
         _ query: DatabaseQuery<Element>,
         in realm: Realm
     ) -> Results<Element> {
-        apply(query, to: realm.objects(Element.self))
-    }
-
-    /// Applies `query` within an existing collection, scoping the fetch to a relationship.
-    ///
-    /// Replaces v1's `ReadObjectObjectsDatabaseOperation`.
-    static func resolve<Element: Object, C: RealmCollection>(
-        _ query: DatabaseQuery<Element>,
-        in collection: C
-    ) -> Results<Element> where C.Element == Element {
-        apply(query, to: collection.filter(NSPredicate(value: true)))
-    }
-
-    // MARK: - Helpers
-
-    private static func apply<Element: Object>(
-        _ query: DatabaseQuery<Element>,
-        to results: Results<Element>
-    ) -> Results<Element> {
-        var results = results
+        var results = realm.objects(Element.self)
 
         if let filter = query.filter {
             results = results.where(filter)
@@ -57,5 +48,52 @@ enum QueryPlan {
         }
 
         return results
+    }
+
+    /// The objects the query selects, with its limit applied.
+    static func elements<Element: Object>(
+        _ query: DatabaseQuery<Element>,
+        in realm: Realm
+    ) -> [Element] {
+        let results = results(query, in: realm)
+
+        guard let limit = query.limit else { return Array(results) }
+        return Array(results.prefix(limit))
+    }
+
+    /// How many objects the query selects, with its limit applied.
+    ///
+    /// Counted in the database rather than by materialising the results.
+    static func count<Element: Object>(
+        _ query: DatabaseQuery<Element>,
+        in realm: Realm
+    ) -> Int {
+        let count = results(query, in: realm).count
+
+        guard let limit = query.limit else { return count }
+        return Swift.min(limit, count)
+    }
+
+    /// The first object the query selects, or `nil`.
+    static func first<Element: Object>(
+        _ query: DatabaseQuery<Element>,
+        in realm: Realm
+    ) -> Element? {
+        guard count(query, in: realm) > 0 else { return nil }
+        return results(query, in: realm).first
+    }
+
+    /// The last object the query selects, or `nil`.
+    ///
+    /// With a limit, this is the last object *within* the limit — not the last row the
+    /// filter matches.
+    static func last<Element: Object>(
+        _ query: DatabaseQuery<Element>,
+        in realm: Realm
+    ) -> Element? {
+        let count = count(query, in: realm)
+        guard count > 0 else { return nil }
+
+        return results(query, in: realm)[count - 1]
     }
 }

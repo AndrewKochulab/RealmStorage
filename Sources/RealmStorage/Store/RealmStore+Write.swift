@@ -106,7 +106,9 @@ public extension RealmStore {
         let realm = try requireRealm()
 
         return try await realm.asyncWrite {
-            let objects = Array(QueryPlan.resolve(query, in: realm))
+            // `elements` applies the query's limit; `results` would not, so an
+            // `update(matching: query.limited(to: 5))` would quietly touch every match.
+            let objects = QueryPlan.elements(query, in: realm)
             try objects.forEach(mutate)
 
             return objects.count
@@ -146,10 +148,12 @@ public extension RealmStore {
         let realm = try requireRealm()
 
         return try await realm.asyncWrite {
-            let results = QueryPlan.resolve(query, in: realm)
-            let count = results.count
+            // Must go through `elements`, which applies the query's limit. Deleting the
+            // unlimited `results` would destroy every match of a `.limited(to:)` query.
+            let objects = QueryPlan.elements(query, in: realm)
+            let count = objects.count
 
-            realm.delete(results)
+            realm.delete(objects)
             return count
         }
     }

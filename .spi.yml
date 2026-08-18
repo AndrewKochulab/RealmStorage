@@ -1,0 +1,6 @@
+# Swift Package Index build and documentation configuration.
+# https://swiftpackageindex.com/swiftpackageindex/spimanifest/documentation
+version: 1
+builder:
+  configs:
+    - documentation_targets: [RealmStorage]

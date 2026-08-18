@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest something RealmStorage should be able to do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that is hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+      description: A sketch of the API, if you have one.
+      render: swift
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: >
+        Including `withRealm { }`, which is the escape hatch for anything this
+        package does not wrap — if that already works, say how well.
