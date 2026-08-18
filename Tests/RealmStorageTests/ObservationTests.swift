@@ -140,3 +140,66 @@ struct ObservationTests {
         }
     }
 }
+
+/// Single-object observation, the companion to the collection stream.
+@Suite("Object observation")
+struct ObjectObservationTests {
+
+    @Test("the stream delivers the object immediately")
+    func initialDelivery() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        var iterator = await store.changes(of: User.self, id: "user-1").makeAsyncIterator()
+
+        guard case .initial(let user)? = try await iterator.next() else {
+            Issue.record("Expected an initial change")
+            return
+        }
+
+        #expect(user.firstName == "Steve")
+    }
+
+    @Test("a modification reports which properties changed")
+    func modificationReportsProperties() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        var iterator = await store.changes(of: User.self, id: "user-1").makeAsyncIterator()
+        _ = try await iterator.next()
+
+        try await store.update(User.self, id: "user-1") { $0.firstName = "Renamed" }
+
+        guard case .change(let user, let properties)? = try await iterator.next() else {
+            Issue.record("Expected a change")
+            return
+        }
+
+        #expect(user.firstName == "Renamed")
+        #expect(properties.contains("firstName"))
+    }
+
+    @Test("deletion is reported and finishes the stream")
+    func deletionFinishesStream() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        var iterator = await store.changes(of: User.self, id: "user-1").makeAsyncIterator()
+        _ = try await iterator.next()
+
+        try await store.delete(User.self, id: "user-1")
+
+        guard case .deleted? = try await iterator.next() else {
+            Issue.record("Expected a deletion")
+            return
+        }
+
+        #expect(try await iterator.next() == nil)
+    }
+
+    @Test("observing an unknown key finishes without emitting")
+    func unknownKeyFinishes() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        var iterator = await store.changes(of: User.self, id: "nope").makeAsyncIterator()
+
+        #expect(try await iterator.next() == nil)
+    }
+}

@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Swift packages are pinned in Package.swift and reviewed by hand; Dependabot
+  # does not support SwiftPM, so this covers the Actions we do control.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "CI"
+    labels:
+      - dependencies

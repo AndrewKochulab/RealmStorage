@@ -108,9 +108,16 @@ public struct DatabaseQuery<Element: Object>: Sendable {
     }
 
     /// Keeps only the first `count` results.
+    ///
+    /// The limit applies everywhere the query is used, reads and writes alike — so
+    /// `delete(_:matching: query.limited(to: 5))` removes at most five objects. A
+    /// negative count is treated as zero.
+    ///
+    /// Realm has no native `LIMIT`, so this is applied after the database has matched;
+    /// it bounds what you receive or modify, not the work the query does.
     public func limited(to count: Int) -> Self {
         var copy = self
-        copy.limit = count
+        copy.limit = Swift.max(0, count)
         return copy
     }
 

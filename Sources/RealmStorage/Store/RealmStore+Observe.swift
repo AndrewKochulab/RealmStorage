@@ -65,7 +65,7 @@ public extension RealmStore {
             }
 
             let limit = query.limit
-            let token = QueryPlan.resolve(query, in: realm).observe { change in
+            let token = QueryPlan.results(query, in: realm).observe { change in
                 switch change {
                 case .initial(let results):
                     continuation.yield(.initial(StorageResults(results.freeze(), limit: limit)))
@@ -79,6 +79,82 @@ public extension RealmStore {
                             modifications: modifications
                         )
                     )
+
+                case .error(let error):
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                token.invalidate()
+            }
+        }
+    }
+}
+
+/// A change to a single observed object.
+///
+/// Payloads are frozen, so they are safe to hand across isolation boundaries.
+public enum StorageObjectChange<Element: Object>: @unchecked Sendable {
+
+    /// The object as it stood when observation began.
+    case initial(Frozen<Element>)
+
+    /// The object changed. `properties` names the properties that changed.
+    case change(Frozen<Element>, properties: [String])
+
+    /// The object was deleted from the database. The stream finishes after this.
+    case deleted
+}
+
+public extension RealmStore {
+
+    /// An async stream of changes to one object, identified by primary key.
+    ///
+    /// Emits ``StorageObjectChange/initial(_:)`` immediately, then one
+    /// ``StorageObjectChange/change(_:properties:)`` per modification. The stream
+    /// finishes after ``StorageObjectChange/deleted``.
+    ///
+    /// Returns a stream that finishes immediately if no object has that key — observing
+    /// something that does not exist is not an error, it simply has nothing to report.
+    ///
+    /// ```swift
+    /// for try await change in await store.changes(of: User.self, id: userID) {
+    ///     if case .change(let user, _) = change { render(user) }
+    /// }
+    /// ```
+    func changes<Element: IdentifiableStorage>(
+        of type: Element.Type,
+        id: Element.ID
+    ) -> AsyncThrowingStream<StorageObjectChange<Element>, any Error> where Element: Object {
+        AsyncThrowingStream { continuation in
+            let realm: Realm
+
+            do {
+                realm = try requireRealm()
+            } catch {
+                continuation.finish(throwing: error)
+                return
+            }
+
+            guard let object = realm.object(ofType: type, forPrimaryKey: id) else {
+                continuation.finish()
+                return
+            }
+
+            continuation.yield(.initial(Frozen(object)))
+
+            let token = object.observe { change in
+                switch change {
+                case .change(let object, let properties):
+                    guard let object = object as? Element else { return }
+                    continuation.yield(
+                        .change(Frozen(object), properties: properties.map(\.name))
+                    )
+
+                case .deleted:
+                    continuation.yield(.deleted)
+                    continuation.finish()
 
                 case .error(let error):
                     continuation.finish(throwing: error)

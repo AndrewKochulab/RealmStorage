@@ -39,7 +39,18 @@ jobs:
         run: swift build -v
 
       - name: Test
-        run: swift test -v
+        run: swift test -v --enable-code-coverage
+
+      - name: Coverage summary
+        run: |
+          binary=$(swift build --show-bin-path)
+          profdata="$binary/codecov/default.profdata"
+          tests=$(find "$binary" -name '*.xctest' -maxdepth 1 | head -1)
+          xcrun llvm-cov report \
+            "$tests/Contents/MacOS/$(basename "$tests" .xctest)" \
+            -instr-profile "$profdata" \
+            -ignore-filename-regex='(Tests|\.build)/' \
+            | tail -20
 
       # A warning-free build is only useful if new warnings stay visible.
       - name: Build with warnings as errors

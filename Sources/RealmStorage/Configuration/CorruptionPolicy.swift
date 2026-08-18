@@ -26,19 +26,42 @@ public enum CorruptionPolicy: Sendable {
     /// Whether `error` means the file itself is beyond saving.
     ///
     /// Deliberately narrow: a transient failure must not be mistaken for corruption,
-    /// because the consequence is deleting the user's data.
+    /// because the consequence is destroying the user's data. Only two conditions
+    /// qualify, and both mean the bytes on disk cannot be opened by this version of
+    /// Realm at all:
+    ///
+    /// - `RLMErrorInvalidDatabase` — not a Realm file, or unreadable.
+    /// - `RLMErrorUnsupportedFileFormatVersion` — written by a newer Realm.
+    ///
+    /// Explicitly **not** included:
+    ///
+    /// - File access and permission errors, which are usually transient. Treating them
+    ///   as corruption is exactly how 1.x destroyed databases on a locked-Keychain
+    ///   background launch.
+    /// - Schema mismatches, which mean a migration is missing — a developer error, fixed
+    ///   by writing the migration rather than by deleting user data. If you really do
+    ///   want the database dropped on schema drift, that is
+    ///   ``StorageConfiguration/deleteRealmIfMigrationNeeded``.
+    ///
+    /// - Note: Realm surfaces these as an `NSError` in the `io.realm` domain rather than
+    ///   as a `Realm.Error`, so matching is done on the domain and code.
     public static func isUnrecoverable(_ error: any Error) -> Bool {
-        guard let realmError = error as? Realm.Error else { return false }
-
-        switch realmError.code {
-        case .invalidDatabase,
-             .unsupportedFileFormatVersion,
-             .schemaMismatch:
-            return true
-        default:
-            return false
+        // The error may already be wrapped by the time a custom policy passes it back.
+        if case StorageError.openFailed(let underlying) = error {
+            return isUnrecoverable(underlying)
         }
+
+        let nsError = error as NSError
+        guard nsError.domain == realmErrorDomain else { return false }
+
+        return unrecoverableCodes.contains(nsError.code)
     }
+
+    /// `RLMErrorDomain`.
+    private static let realmErrorDomain = "io.realm"
+
+    /// `RLMErrorInvalidDatabase` and `RLMErrorUnsupportedFileFormatVersion`.
+    private static let unrecoverableCodes: Set<Int> = [20, 16]
 
     /// Applies the policy to `error`.
     func shouldReset(after error: any Error) -> Bool {

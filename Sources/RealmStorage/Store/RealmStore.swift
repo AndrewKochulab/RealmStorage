@@ -36,7 +36,7 @@ public actor RealmStore {
     public nonisolated let configuration: StorageConfiguration
 
     private var realm: Realm?
-    private let fileMigrator: FileStorageMigrator
+    private let preparer: DatabasePreparer
 
     /// The resolved on-disk location, or `nil` for an in-memory database.
     private var resolvedFileURL: URL?
@@ -45,7 +45,7 @@ public actor RealmStore {
 
     public init(configuration: StorageConfiguration) {
         self.configuration = configuration
-        self.fileMigrator = FileStorageMigrator()
+        self.preparer = DatabasePreparer(configuration: configuration)
     }
 
     // MARK: - Lifecycle
@@ -68,7 +68,13 @@ public actor RealmStore {
             }
 
             try reset()
-            try await openRealm()
+
+            do {
+                try await openRealm()
+            } catch let retryError {
+                // Recovery did not help; surface the second failure, wrapped.
+                throw StorageError.openFailed(underlying: retryError)
+            }
 
             throw StorageError.databaseWasReset(underlying: error)
         }
@@ -86,7 +92,7 @@ public actor RealmStore {
         realm = nil
 
         guard let resolvedFileURL else { return }
-        try fileMigrator.removeDatabase(at: resolvedFileURL)
+        try FileStorageMigrator().removeDatabase(at: resolvedFileURL)
     }
 
     // MARK: - Access
@@ -95,15 +101,6 @@ public actor RealmStore {
     func requireRealm() throws -> Realm {
         guard let realm else { throw StorageError.storeNotOpen }
         return realm
-    }
-
-    /// The `Realm.Configuration` this store opened with.
-    ///
-    /// `Realm.Configuration` is `Sendable`, so this can safely cross to another
-    /// isolation domain — which is how ``MainRealmStore`` reuses the file migration,
-    /// encryption and corruption handling done here instead of repeating it.
-    func currentRealmConfiguration() throws -> Realm.Configuration {
-        try requireRealm().configuration
     }
 
     /// Runs `body` against the underlying `Realm` inside the actor.
@@ -118,108 +115,15 @@ public actor RealmStore {
     // MARK: - Opening
 
     private func openRealm() async throws {
-        let realmConfiguration = try makeRealmConfiguration()
+        let prepared = try preparer.prepare()
 
-        let realm = try await Realm(configuration: realmConfiguration, actor: self)
-        self.realm = realm
+        // Record the path *before* opening. `reset()` needs it to delete a file that
+        // failed to open, and assigning it afterwards left recovery with nothing to
+        // remove — so `CorruptionPolicy.deleteAndRecreate` could never actually recover.
+        resolvedFileURL = prepared.fileURL
 
-        try applyFileAttributes()
-    }
+        realm = try await Realm(configuration: prepared.realmConfiguration, actor: self)
 
-    private func makeRealmConfiguration() throws -> Realm.Configuration {
-        var realmConfiguration = Realm.Configuration()
-
-        realmConfiguration.schemaVersion = configuration.schemaVersion
-        realmConfiguration.objectTypes = configuration.objectTypes
-        realmConfiguration.readOnly = configuration.isReadOnly
-
-        if let migrate = configuration.migrate {
-            realmConfiguration.migrationBlock = { migration, oldSchemaVersion in
-                migrate(migration, oldSchemaVersion)
-            }
-        }
-
-        // In-memory: no file, and Realm rejects an encryption key alongside an identifier.
-        if case .inMemory(let identifier) = configuration.location {
-            realmConfiguration.inMemoryIdentifier = identifier
-            resolvedFileURL = nil
-
-            return realmConfiguration
-        }
-
-        guard let directory = try configuration.location.resolveDirectory() else {
-            throw StorageError.storageDirectoryUnavailable
-        }
-
-        let encryptionKey = try resolveEncryptionKey()
-
-        let fileURL: URL
-        if encryptionKey != nil {
-            fileURL = encryptedFileURL(in: directory)
-
-            // Carry a pre-existing plaintext database over to the encrypted file.
-            try fileMigrator.migrateToEncrypted(
-                from: plaintextFileURL(in: directory),
-                to: fileURL,
-                key: encryptionKey!,
-                source: .init(
-                    schemaVersion: configuration.schemaVersion,
-                    objectTypes: configuration.objectTypes,
-                    migrate: configuration.migrate
-                )
-            )
-        } else {
-            fileURL = plaintextFileURL(in: directory)
-        }
-
-        realmConfiguration.fileURL = fileURL
-        realmConfiguration.encryptionKey = encryptionKey
-        resolvedFileURL = fileURL
-
-        return realmConfiguration
-    }
-
-    private func resolveEncryptionKey() throws -> Data? {
-        switch configuration.encryption {
-        case .none:
-            return nil
-
-        case .key(let key):
-            guard key.count == EncryptionKeyProvider.requiredKeyLength else {
-                throw StorageError.encryptionKeyInvalidLength(
-                    expected: EncryptionKeyProvider.requiredKeyLength,
-                    actual: key.count
-                )
-            }
-
-            return key
-
-        case .keychain(let store, let account):
-            return try EncryptionKeyProvider(store: store, account: account).key()
-        }
-    }
-
-    private func applyFileAttributes() throws {
-        guard let resolvedFileURL else { return }
-
-        if let fileProtection = configuration.fileProtection {
-            try fileMigrator.applyFileProtection(fileProtection, to: resolvedFileURL)
-        }
-
-        if configuration.excludedFromBackup {
-            try fileMigrator.excludeFromBackup(resolvedFileURL)
-        }
-    }
-
-    private func plaintextFileURL(in directory: URL) -> URL {
-        directory
-            .appendingPathComponent(configuration.fileName)
-            .appendingPathExtension("realm")
-    }
-
-    private func encryptedFileURL(in directory: URL) -> URL {
-        directory
-            .appendingPathComponent("\(configuration.fileName)_encrypted")
-            .appendingPathExtension("realm")
+        try preparer.applyFileAttributes(to: prepared.fileURL)
     }
 }

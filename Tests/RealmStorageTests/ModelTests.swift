@@ -139,3 +139,45 @@ struct ModelTests {
         #expect(live?.id == "user-0")
     }
 }
+
+@Suite("Batch lookup")
+struct BatchLookupTests {
+
+    @Test("objects(ids:) fetches several by primary key")
+    func objectsByIDs() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 5))
+
+        let found = try await store.objects(User.self, ids: ["user-0", "user-3"])
+
+        #expect(Set(found.map(\.id)) == ["user-0", "user-3"])
+    }
+
+    @Test("objects(ids:) skips keys that do not exist")
+    func objectsByIDsSkipsMissing() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        let found = try await store.objects(User.self, ids: ["user-0", "nope"])
+
+        #expect(found.count == 1)
+    }
+
+    @Test("objects(ids:) works with UUID keys")
+    func objectsByUUIDs() async throws {
+        let store = try await TestStore.make()
+        let first = UUID()
+        let second = UUID()
+        try await store.save([Device(id: first, label: "A"), Device(id: second, label: "B")])
+
+        let found = try await store.objects(Device.self, ids: [first])
+
+        #expect(found.count == 1)
+        #expect(found[0].label == "A")
+    }
+
+    @Test("objects(ids:) with no ids returns nothing")
+    func objectsByNoIDs() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        #expect(try await store.objects(User.self, ids: [String]()).isEmpty)
+    }
+}

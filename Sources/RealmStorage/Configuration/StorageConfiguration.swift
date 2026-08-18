@@ -76,6 +76,27 @@ public struct StorageConfiguration: Sendable {
     /// Whether to open the file read-only.
     public var isReadOnly: Bool
 
+    /// Delete and recreate the database when the schema does not match, instead of
+    /// migrating it.
+    ///
+    /// Convenient during development; **destroys user data** in production. Left off by
+    /// default, and deliberately separate from ``corruptionPolicy``, which governs
+    /// failures rather than schema drift.
+    public var deleteRealmIfMigrationNeeded: Bool
+
+    /// Whether to compact the database when opening it.
+    ///
+    /// Called with the file's total and used byte counts; return `true` to compact.
+    /// Realm files only grow, so a long-lived database with heavy churn can hold a lot of
+    /// dead space:
+    ///
+    /// ```swift
+    /// configuration.shouldCompactOnLaunch = { total, used in
+    ///     total > 100 * 1024 * 1024 && Double(used) / Double(total) < 0.5
+    /// }
+    /// ```
+    public var shouldCompactOnLaunch: (@Sendable (Int, Int) -> Bool)?
+
     // MARK: - Initialization
 
     public init(
@@ -88,6 +109,8 @@ public struct StorageConfiguration: Sendable {
         excludedFromBackup: Bool = true,
         objectTypes: [Object.Type]? = nil,
         isReadOnly: Bool = false,
+        deleteRealmIfMigrationNeeded: Bool = false,
+        shouldCompactOnLaunch: (@Sendable (Int, Int) -> Bool)? = nil,
         migrate: (@Sendable (Migration, UInt64) -> Void)? = nil
     ) {
         self.location = location
@@ -99,6 +122,8 @@ public struct StorageConfiguration: Sendable {
         self.excludedFromBackup = excludedFromBackup
         self.objectTypes = objectTypes
         self.isReadOnly = isReadOnly
+        self.deleteRealmIfMigrationNeeded = deleteRealmIfMigrationNeeded
+        self.shouldCompactOnLaunch = shouldCompactOnLaunch
         self.migrate = migrate
     }
 

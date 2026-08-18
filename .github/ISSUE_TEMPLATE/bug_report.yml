@@ -1,0 +1,46 @@
+name: Bug report
+description: Something behaves differently from what the docs say
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: >
+        The smallest code that shows the problem — model definitions, the
+        configuration, and the call. A failing test is ideal.
+      render: swift
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: RealmStorage version
+      placeholder: "2.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Xcode, Swift and platform
+      placeholder: "Xcode 26.6, Swift 6.3, iOS 26.5 simulator"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: >
+        Crash logs, whether encryption is on, whether the database was migrated
+        from RealmStorage 1.x.
