@@ -61,15 +61,23 @@ struct SecretStoreTests {
         let store = KeychainSecretStore()
 
         #expect(store.accessibility == .afterFirstUnlockThisDeviceOnly)
-        #expect(store.accessibility.rawValue == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
+        #expect(
+            store.accessibility.rawValue == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        )
     }
 
     @Test("each accessibility case maps to its Security constant")
     func accessibilityMapping() {
         #expect(KeychainAccessibility.whenUnlocked.rawValue == kSecAttrAccessibleWhenUnlocked)
-        #expect(KeychainAccessibility.whenUnlockedThisDeviceOnly.rawValue == kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
+        #expect(
+            KeychainAccessibility.whenUnlockedThisDeviceOnly.rawValue
+                == kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        )
         #expect(KeychainAccessibility.afterFirstUnlock.rawValue == kSecAttrAccessibleAfterFirstUnlock)
-        #expect(KeychainAccessibility.afterFirstUnlockThisDeviceOnly.rawValue == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
+        #expect(
+            KeychainAccessibility.afterFirstUnlockThisDeviceOnly.rawValue
+                == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        )
     }
 
     @Test("the service name is configurable and defaults sensibly")

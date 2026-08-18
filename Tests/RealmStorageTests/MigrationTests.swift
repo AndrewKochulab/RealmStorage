@@ -81,8 +81,9 @@ struct MigrationTests {
             try await store.open()
 
             // Primary keys survived the rename rather than being reset to "".
-            let ids = try await store.objects(User.self, matching: DatabaseQuery<User>().sorted(by: \.id)) { $0.id }
-            let names = try await store.objects(User.self, matching: DatabaseQuery<User>().sorted(by: \.id)) { $0.firstName }
+            let sorted = DatabaseQuery<User>().sorted(by: \.id)
+            let ids = try await store.objects(User.self, matching: sorted) { $0.id }
+            let names = try await store.objects(User.self, matching: sorted) { $0.firstName }
 
             #expect(ids == ["user-0", "user-1", "user-2"])
             #expect(names == ["Steve", "Tony", "Bruce"])
