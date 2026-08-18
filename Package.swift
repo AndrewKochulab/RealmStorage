@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,10 +6,10 @@ import PackageDescription
 let package = Package(
     name: "RealmStorage",
     platforms: [
-        .iOS(.v11),
-        .macOS(.v10_13),
-        .tvOS(.v10),
-        .watchOS(.v3)
+        .iOS(.v13),
+        .macOS(.v10_15),
+        .tvOS(.v13),
+        .watchOS(.v6)
     ],
     products: [
         .library(
@@ -19,51 +19,28 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            name: "Realm",
-            url: "https://github.com/realm/realm-cocoa.git",
-            .branch("master")
-        ),
-        .package(
-            name: "Sourcery",
-            url: "https://github.com/krzysztofzablocki/Sourcery.git",
-            from: "1.0.0"
-        ),
-        .package(
-            name: "KeychainSwift",
-            url: "https://github.com/evgenyneu/keychain-swift.git",
-            from: "19.0.0"
+            url: "https://github.com/realm/realm-swift.git",
+            .upToNextMajor(from: "20.0.5")
         )
     ],
     targets: [
         .target(
             name: "RealmStorage",
             dependencies: [
-                .product(
-                    name: "Realm",
-                    package: "Realm"
-                ),
-                .product(
-                    name: "RealmSwift",
-                    package: "Realm"
-                ),
-                .product(
-                    name: "KeychainSwift",
-                    package: "KeychainSwift"
-                )
+                .product(name: "RealmSwift", package: "realm-swift")
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
             ]
         ),
         .testTarget(
             name: "RealmStorageTests",
-            dependencies: [
-                "RealmStorage",
-                .product(
-                    name: "Realm",
-                    package: "Realm"
-                ),
-                .product(
-                    name: "RealmSwift",
-                    package: "Realm"
-                )
+            dependencies: ["RealmStorage"],
+            resources: [
+                .copy("Fixtures")
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
             ]
         )
     ]
