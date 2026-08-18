@@ -117,11 +117,15 @@ The 1.x line is unaffected and remains available on the `1.x` branch.
 
 ## [1.0.5] — 2026-08-18
 
-Released from the 1.x maintenance branch. No source changes.
+Tagged on the 1.x maintenance branch. No source changes. **GitHub only — not published to CocoaPods.**
 
 ### Fixed
 
-- Tag `1.0.4` predated the ambiguous-`SortDescriptor` fix (`240c7c0`) and the merge of PR #1, so CocoaPods consumers never received either. `1.0.5` ships the existing `master` tree.
+- Tag `1.0.4` predated the ambiguous-`SortDescriptor` fix (`240c7c0`) and the merge of PR #1. This tag includes both.
+
+### Known limitation
+
+The 1.x podspec cannot be published on a current toolchain, and the already-published `1.0.4` cannot be installed either. Three independent causes: `s.dependency 'Sourcery'` is unversioned and Sourcery 2.1.5+ declares watchOS only (it was never imported by the source — always a build-time generator); `Realm`/`RealmSwift` are unversioned and resolve to Realm 20, which will not compile under `swift_version = '5.2'`; and `s.platform = :ios, "9.0"` is below RealmSwift 10.x's iOS 12 floor. Repairing all three would raise the minimum iOS from 9 to 12 — a breaking change for the users this line exists to protect — so 1.x is left as it is. CocoaPods users on a current toolchain should move to 2.x.
 
 ## [1.0.4] — 2020-11-28
 

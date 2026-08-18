@@ -17,7 +17,7 @@ let users = try await store.objects(User.self) {
 }
 ```
 
-> **Upgrading from 1.x?** 2.0 is a rewrite. See [MIGRATION.md](MIGRATION.md) for a step-by-step guide. The 1.x line remains available on the `1.x` branch and at tag `1.0.5`.
+> **Upgrading from 1.x?** 2.0 was a rewrite. See [MIGRATION.md](MIGRATION.md) for a step-by-step guide. The 1.x line remains available via SPM and as source on the [`1.x`](https://github.com/AndrewKochulab/RealmStorage/tree/1.x) branch — but it can no longer be installed through CocoaPods on a current toolchain, for reasons outside this package's control ([details](CHANGELOG.md#105--2026-08-18)).
 
 ## Features
 
@@ -42,7 +42,7 @@ Then add `RealmStorage` to your target's dependencies.
 ### CocoaPods
 
 ```ruby
-pod 'RealmStorage', '~> 2.0'
+pod 'RealmStorage', '~> 2.1'
 ```
 
 No build phase is required. 1.x needed a Sourcery run to generate query schemas; 2.0 does not.
