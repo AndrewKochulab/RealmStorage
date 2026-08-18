@@ -118,3 +118,74 @@ struct LimitTests {
         #expect(try await store.contains(User.self, matching: limited))
     }
 }
+
+/// Realm reports change indices against the full result set, which can point past the end
+/// of a limited view — and `results[index]` would then trap.
+@Suite("Limits and observation")
+struct LimitObservationTests {
+
+    @Test("reported indices stay inside the limited results")
+    func indicesStayInBounds() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+        let query = DatabaseQuery<User>().sorted(by: \.age).limited(to: 2)
+
+        var iterator = await store.changes(of: User.self, matching: query).makeAsyncIterator()
+        _ = try await iterator.next()
+
+        // Sorts past the limit, so Realm reports index 3 against a 2-element view.
+        try await store.save(User(id: "late", age: 999))
+
+        guard case .update(let results, _, let insertions, _)? = try await iterator.next() else {
+            Issue.record("Expected an update change")
+            return
+        }
+
+        #expect(results.count == 2)
+        #expect(insertions.isEmpty)
+
+        // The contract callers rely on: every reported index is safe to subscript.
+        for index in insertions {
+            #expect(index < results.endIndex)
+        }
+    }
+
+    @Test("a change inside the limit still reports its index")
+    func indicesInsideLimitSurvive() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+        let query = DatabaseQuery<User>().sorted(by: \.age).limited(to: 2)
+
+        var iterator = await store.changes(of: User.self, matching: query).makeAsyncIterator()
+        _ = try await iterator.next()
+
+        // Sorts to the front, inside the limit.
+        try await store.save(User(id: "early", age: 1))
+
+        guard case .update(let results, _, let insertions, _)? = try await iterator.next() else {
+            Issue.record("Expected an update change")
+            return
+        }
+
+        #expect(insertions == [0])
+        #expect(results[0].age == 1)
+    }
+
+    @Test("an unlimited query reports every index")
+    func unlimitedReportsEverything() async throws {
+        let store = try await TestStore.seeded(TestStore.sampleUsers(count: 3))
+
+        var iterator = await store.changes(
+            of: User.self,
+            matching: DatabaseQuery<User>().sorted(by: \.age)
+        ).makeAsyncIterator()
+        _ = try await iterator.next()
+
+        try await store.save(User(id: "late", age: 999))
+
+        guard case .update(_, _, let insertions, _)? = try await iterator.next() else {
+            Issue.record("Expected an update change")
+            return
+        }
+
+        #expect(insertions == [3])
+    }
+}

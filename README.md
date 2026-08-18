@@ -209,7 +209,9 @@ for try await change in await store.changes(of: User.self, matching: query) {
 }
 ```
 
-Payloads are frozen. Ending the loop invalidates the notification token.
+Payloads are frozen. Ending the loop invalidates the notification token. With a
+`limited(to:)` query the reported indices are those visible within the limit, so
+`results[index]` is always safe.
 
 To watch one object instead, pass its primary key. The stream reports which properties
 changed, and finishes once the object is deleted:

@@ -35,6 +35,12 @@ public enum StorageChange<Element: Object>: @unchecked Sendable {
 
 public extension RealmStore {
 
+    /// Keeps only the indices that fall inside a limited result set.
+    private static func visibleIndices(_ indices: [Int], limit: Int?) -> [Int] {
+        guard let limit else { return indices }
+        return indices.filter { $0 < limit }
+    }
+
     /// An async stream of changes to the objects matching `query`.
     ///
     /// Realm's whole value for UI is live change notifications, so dropping to
@@ -44,6 +50,11 @@ public extension RealmStore {
     /// The stream yields ``StorageChange/initial(_:)`` once, then an
     /// ``StorageChange/update(_:deletions:insertions:modifications:)`` per change. Ending
     /// iteration (or cancelling the task) invalidates the underlying notification token.
+    ///
+    /// - Note: With a `limited(to:)` query, the reported indices are those visible within
+    ///   the limit, so `results[index]` is always valid. A change beyond the limit still
+    ///   produces an update — the results themselves may have shifted — but contributes
+    ///   no indices.
     ///
     /// ```swift
     /// for try await change in await store.changes(of: User.self) {
@@ -71,12 +82,16 @@ public extension RealmStore {
                     continuation.yield(.initial(StorageResults(results.freeze(), limit: limit)))
 
                 case .update(let results, let deletions, let insertions, let modifications):
+                    // Realm reports indices against the full result set. With a limit in
+                    // play those can point past the end of what the caller can see, and
+                    // `results[index]` would then trap — so indices outside the visible
+                    // window are dropped rather than handed over.
                     continuation.yield(
                         .update(
                             StorageResults(results.freeze(), limit: limit),
-                            deletions: deletions,
-                            insertions: insertions,
-                            modifications: modifications
+                            deletions: Self.visibleIndices(deletions, limit: limit),
+                            insertions: Self.visibleIndices(insertions, limit: limit),
+                            modifications: Self.visibleIndices(modifications, limit: limit)
                         )
                     )
 
