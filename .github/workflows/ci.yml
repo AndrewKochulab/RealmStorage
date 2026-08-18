@@ -10,16 +10,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # realm-swift 20.x requires Xcode 26 or newer.
-  DEVELOPER_DIR: /Applications/Xcode_26.app/Contents/Developer
-
 jobs:
   test:
     name: Test (macOS)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
 
       - name: Show toolchain
         run: swift --version && xcodebuild -version
@@ -51,6 +55,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
       - name: Build
         run: |
           xcodebuild build \
@@ -63,6 +75,14 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
 
       # The Keychain integration test needs a real Keychain, which a bare
       # `swift test` process does not get; there it records a known issue.
@@ -78,6 +98,15 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
+
       - name: Install SwiftLint
         run: brew install swiftlint
       - name: Lint
@@ -88,6 +117,14 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      # realm-swift 20.x requires Xcode 26+. Runner images move, so resolve the
+      # newest installed Xcode rather than pinning a path that may not exist.
+      - name: Select newest Xcode
+        run: |
+          newest=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $newest"
+          echo "DEVELOPER_DIR=$newest/Contents/Developer" >> "$GITHUB_ENV"
 
       # 1.x raced on an unsynchronised Realm cache; TSan would have caught it.
       - name: Test under TSan
