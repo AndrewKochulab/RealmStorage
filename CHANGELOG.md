@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] — 2026-08-19
+
+### Fixed
+
+- **Change notifications could report indices outside a limited result set.** Realm reports change indices against the full result set, so with a `limited(to:)` query an insertion past the limit arrived as, say, index `3` alongside a two-element `StorageResults` — and `results[3]` would trap. Indices outside the visible window are now dropped, so every index in a change payload is safe to subscript. A change beyond the limit still produces an update, since the visible results may have shifted; it just contributes no indices.
+
 ## [2.1.0] — 2026-08-18
 
 ### Fixed
@@ -121,6 +127,7 @@ Released from the 1.x maintenance branch. No source changes.
 
 Initial public releases (`1.0.0`–`1.0.4`).
 
+[2.1.1]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/2.1.1
 [2.1.0]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/2.1.0
 [2.0.0]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/2.0.0
 [1.0.5]: https://github.com/AndrewKochulab/RealmStorage/releases/tag/1.0.5
